@@ -1,5 +1,5 @@
 -- 1. Cargas tu librería desde GitHub
-local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/Chrismon014/ERDN/refs/heads/main/LibraryERDN"))()
+local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/AngelOficialBe/ChrisxLaleScript/refs/heads/main/Libreria"))()
 
 -- 2. LLAMAS A LA FUNCIÓN VISUAL (Esto es lo que hacía falta para que cargue la interfaz)
 local Window = Library:CreateWindow({
