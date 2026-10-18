@@ -1,5 +1,9 @@
 --[[ 
-    ERDN Modern Aesthetic UI Library 
+    ERDN Combined Aesthetic UI Library
+    - Borde RGB Animado
+    - Perfil con Avatar del Jugador
+    - Pestañas con Indicador Estilo Aural
+    - Tarjetas de Toggles con Switch Deslizante y Subtítulos
 ]]
 
 local Library = {}
@@ -44,22 +48,22 @@ local function MakeDraggable(dragBar, object)
 end
 
 function Library:CreateWindow(config)
-    local windowTitle = config.Title or "ERDN Hub"
+    local windowTitle = config.Title or "ERDN Hub | Muscle Legends"
     local miniIconId = config.Icon or "rbxassetid://6031097225" 
     
     local ScreenGui = Create("ScreenGui", {
-        Name = "ERDN_AestheticUI",
+        Name = "ERDN_CombinedUI",
         ZIndexBehavior = Enum.ZIndexBehavior.Sibling,
         IgnoreGuiInset = true
     }, RunService:IsStudio() and Player.PlayerGui or (gethui and gethui() or CoreGui))
 
-    -- Ventana Principal Borde RGB
+    -- Marco Principal con Borde RGB Animado
     local MainRGBFrame = Create("Frame", {
         Name = "MainRGBFrame",
         BackgroundColor3 = Color3.fromRGB(255, 255, 255),
         BorderSizePixel = 0,
         Position = UDim2.new(0.5, 0, 0.5, 0),
-        Size = UDim2.new(0, 480, 0, 310),
+        Size = UDim2.new(0, 560, 0, 340),
         AnchorPoint = Vector2.new(0.5, 0.5)
     }, ScreenGui)
 
@@ -91,19 +95,19 @@ function Library:CreateWindow(config)
     -- Cuadro Minimizado
     local MiniButton = Create("TextButton", {
         Name = "ERDN_Mini",
-        Size = UDim2.new(0, 110, 0, 38),
-        Position = UDim2.new(1, -125, 0, 15),
+        Size = UDim2.new(0, 120, 0, 38),
+        Position = UDim2.new(1, -135, 0, 15),
         BackgroundColor3 = Color3.fromRGB(22, 22, 30),
         BorderSizePixel = 0,
         Text = windowTitle,
         TextColor3 = Color3.fromRGB(235, 235, 255),
         Font = Enum.Font.GothamBold,
-        TextSize = 13,
+        TextSize = 12,
         Visible = false,
         AutoButtonColor = false
     }, ScreenGui)
     Create("UICorner", {CornerRadius = UDim.new(0, 10)}, MiniButton)
-    local MiniStroke = Create("UIStroke", {Color = Color3.fromRGB(95, 70, 190), Thickness = 1.5}, MiniButton)
+    Create("UIStroke", {Color = Color3.fromRGB(95, 70, 190), Thickness = 1.5}, MiniButton)
 
     -- Animación RGB Continua
     task.spawn(function()
@@ -113,40 +117,56 @@ function Library:CreateWindow(config)
         end
     end)
 
-    -- Barra de Arrastre (DragBar Superior)
-    local DragBar = Create("Frame", {
-        Size = UDim2.new(1, -90, 0, 35),
-        Position = UDim2.new(0, 90, 0, 0),
-        BackgroundTransparency = 1,
-        Active = true
+    -- Barra Superior
+    local TopBar = Create("Frame", {
+        Name = "TopBar",
+        BackgroundColor3 = Color3.fromRGB(12, 12, 16),
+        BorderSizePixel = 0,
+        Size = UDim2.new(1, 0, 0, 32)
     }, MainFrame)
-    MakeDraggable(DragBar, MainRGBFrame)
 
-    -- Botón Cerrar (X)
+    Create("UICorner", {CornerRadius = UDim.new(0, 10)}, TopBar)
+    Create("Frame", {
+        BackgroundColor3 = Color3.fromRGB(12, 12, 16),
+        BorderSizePixel = 0,
+        Position = UDim2.new(0, 0, 1, -5),
+        Size = UDim2.new(1, 0, 0, 5)
+    }, TopBar)
+
+    local TitleLabel = Create("TextLabel", {
+        Font = Enum.Font.GothamBold,
+        Text = windowTitle,
+        TextColor3 = Color3.fromRGB(240, 240, 245),
+        TextSize = 13,
+        BackgroundTransparency = 1,
+        Position = UDim2.new(0, 14, 0, 0),
+        Size = UDim2.new(0, 250, 1, 0),
+        TextXAlignment = Enum.TextXAlignment.Left
+    }, TopBar)
+
+    MakeDraggable(TopBar, MainRGBFrame)
+
     local CloseBtn = Create("TextButton", {
-        Size = UDim2.new(0, 26, 0, 26),
-        Position = UDim2.new(1, -34, 0, 6),
+        Size = UDim2.new(0, 24, 0, 24),
+        Position = UDim2.new(1, -30, 0, 4),
         BackgroundColor3 = Color3.fromRGB(30, 30, 38),
         Text = "×",
         TextColor3 = Color3.fromRGB(180, 180, 200),
         Font = Enum.Font.GothamBold,
         TextSize = 16
-    }, MainFrame)
+    }, TopBar)
     Create("UICorner", {CornerRadius = UDim.new(0, 6)}, CloseBtn)
-    CloseBtn.MouseButton1Click:Connect(function()
-        ScreenGui:Destroy()
-    end)
+    CloseBtn.MouseButton1Click:Connect(function() ScreenGui:Destroy() end)
 
-    -- Botón Minimizar (-)
     local MinimizeBtn = Create("TextButton", {
-        Size = UDim2.new(0, 26, 0, 26),
-        Position = UDim2.new(1, -66, 0, 6),
+        Size = UDim2.new(0, 24, 0, 24),
+        Position = UDim2.new(1, -60, 0, 4),
         BackgroundColor3 = Color3.fromRGB(30, 30, 38),
         Text = "-",
         TextColor3 = Color3.fromRGB(210, 210, 225),
         Font = Enum.Font.GothamBold,
         TextSize = 16
-    }, MainFrame)
+    }, TopBar)
     Create("UICorner", {CornerRadius = UDim.new(0, 6)}, MinimizeBtn)
 
     MinimizeBtn.MouseButton1Click:Connect(function()
@@ -159,51 +179,92 @@ function Library:CreateWindow(config)
         MainRGBFrame.Visible = true
     end)
 
-    -- Sidebar (Panel Izquierdo con Pestañas)
-    local Sidebar = Create("Frame", {
-        Size = UDim2.new(0, 110, 1, 0),
-        BackgroundColor3 = Color3.fromRGB(12, 12, 16),
-        BorderSizePixel = 0
-    }, MainFrame)
-    Create("UICorner", {CornerRadius = UDim.new(0, 10)}, Sidebar)
-
-    -- Logo / Título Sidebar
-    local LogoTitle = Create("TextLabel", {
-        Size = UDim2.new(1, -10, 0, 35),
-        Position = UDim2.new(0, 10, 0, 8),
+    -- Contenedor Principal
+    local Container = Create("Frame", {
+        Name = "Container",
         BackgroundTransparency = 1,
-        Text = windowTitle,
-        TextColor3 = Color3.fromRGB(255, 255, 255),
+        Position = UDim2.new(0, 0, 0, 32),
+        Size = UDim2.new(1, 0, 1, -32)
+    }, MainFrame)
+
+    -- Sidebar (Panel Izquierdo con Perfil de Usuario)
+    local Sidebar = Create("Frame", {
+        Name = "Sidebar",
+        BackgroundColor3 = Color3.fromRGB(12, 12, 16),
+        BorderSizePixel = 0,
+        Position = UDim2.new(0, 0, 0, 0),
+        Size = UDim2.new(0, 150, 1, 0)
+    }, Container)
+    Create("UICorner", {CornerRadius = UDim.new(0, 8)}, Sidebar)
+
+    -- Avatar e Información del Jugador
+    local AvatarImage = Create("ImageLabel", {
+        Name = "AvatarImage",
+        BackgroundColor3 = Color3.fromRGB(25, 24, 32),
+        BorderSizePixel = 0,
+        Position = UDim2.new(0, 12, 0, 10),
+        Size = UDim2.new(0, 38, 0, 38),
+        Image = Players:GetUserThumbnailAsync(Player.UserId, Enum.ThumbnailType.HeadShot, Enum.ThumbnailSize.Size150x150)
+    }, Sidebar)
+    Create("UICorner", {CornerRadius = UDim.new(1, 0)}, AvatarImage)
+
+    Create("TextLabel", {
         Font = Enum.Font.GothamBold,
+        Text = Player.Name,
+        TextColor3 = Color3.fromRGB(235, 235, 240),
         TextSize = 11,
+        BackgroundTransparency = 1,
+        Position = UDim2.new(0, 56, 0, 12),
+        Size = UDim2.new(0, 85, 0, 16),
+        TextXAlignment = Enum.TextXAlignment.Left,
+        TextTruncate = Enum.TextTruncate.AtEnd
+    }, Sidebar)
+
+    Create("TextLabel", {
+        Font = Enum.Font.Gotham,
+        Text = "VIP User",
+        TextColor3 = Color3.fromRGB(130, 130, 140),
+        TextSize = 10,
+        BackgroundTransparency = 1,
+        Position = UDim2.new(0, 56, 0, 28),
+        Size = UDim2.new(0, 85, 0, 14),
         TextXAlignment = Enum.TextXAlignment.Left
     }, Sidebar)
 
+    -- Línea divisoria
+    Create("Frame", {
+        BackgroundColor3 = Color3.fromRGB(28, 28, 36),
+        BorderSizePixel = 0,
+        Position = UDim2.new(0, 12, 0, 56),
+        Size = UDim2.new(1, -24, 0, 1)
+    }, Sidebar)
+
+    -- Lista de Botones de Pestañas
     local NavContainer = Create("Frame", {
-        Size = UDim2.new(1, -10, 1, -48),
-        Position = UDim2.new(0, 5, 0, 45),
+        Size = UDim2.new(1, -10, 1, -66),
+        Position = UDim2.new(0, 5, 0, 62),
         BackgroundTransparency = 1
     }, Sidebar)
 
     Create("UIListLayout", {
-        Padding = UDim.new(0, 4),
+        Padding = UDim.new(0, 5),
         SortOrder = Enum.SortOrder.LayoutOrder
     }, NavContainer)
 
-    -- Contenedor de Páginas (Derecha)
+    -- Área de Contenido Derecha
     local ContentContainer = Create("Frame", {
-        Size = UDim2.new(1, -115, 1, -8),
-        Position = UDim2.new(0, 112, 0, 4),
+        Size = UDim2.new(1, -155, 1, 0),
+        Position = UDim2.new(0, 155, 0, 0),
         BackgroundTransparency = 1
-    }, MainFrame)
+    }, Container)
 
     local WindowObj = {}
     local pages = {}
     local firstTab = true
 
-    function WindowObj:CreateTab(name, iconChar)
+    function WindowObj:CreateTab(name, iconChar, subTitleText)
         local btn = Create("TextButton", {
-            Size = UDim2.new(1, 0, 0, 30),
+            Size = UDim2.new(1, 0, 0, 32),
             BackgroundColor3 = Color3.fromRGB(12, 12, 16),
             BorderSizePixel = 0,
             Text = "",
@@ -213,17 +274,17 @@ function Library:CreateWindow(config)
 
         local iconLabel = Create("TextLabel", {
             Size = UDim2.new(0, 20, 1, 0),
-            Position = UDim2.new(0, 6, 0, 0),
+            Position = UDim2.new(0, 8, 0, 0),
             BackgroundTransparency = 1,
             Text = iconChar or name:sub(1, 1),
             TextColor3 = Color3.fromRGB(160, 160, 180),
             Font = Enum.Font.GothamBold,
-            TextSize = 10
+            TextSize = 11
         }, btn)
 
         local textLabel = Create("TextLabel", {
-            Size = UDim2.new(1, -28, 1, 0),
-            Position = UDim2.new(0, 26, 0, 0),
+            Size = UDim2.new(1, -32, 1, 0),
+            Position = UDim2.new(0, 28, 0, 0),
             BackgroundTransparency = 1,
             Text = name,
             TextColor3 = Color3.fromRGB(180, 180, 200),
@@ -243,8 +304,8 @@ function Library:CreateWindow(config)
 
         -- Página de Contenido
         local page = Create("ScrollingFrame", {
-            Size = UDim2.new(1, -10, 1, -10),
-            Position = UDim2.new(0, 5, 0, 5),
+            Size = UDim2.new(1, -16, 1, -12),
+            Position = UDim2.new(0, 8, 0, 6),
             BackgroundTransparency = 1,
             BorderSizePixel = 0,
             ScrollBarThickness = 3,
@@ -260,6 +321,31 @@ function Library:CreateWindow(config)
         pageLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
             page.CanvasSize = UDim2.new(0, 0, 0, pageLayout.AbsoluteContentSize.Y + 15)
         end)
+
+        -- Título superior de la pestaña activa
+        local TabHeaderTitle = Create("TextLabel", {
+            Size = UDim2.new(1, 0, 0, 22),
+            BackgroundTransparency = 1,
+            Text = name,
+            TextColor3 = Color3.fromRGB(255, 255, 255),
+            Font = Enum.Font.GothamBold,
+            TextSize = 18,
+            TextXAlignment = Enum.TextXAlignment.Left,
+            LayoutOrder = -2
+        }, page)
+
+        if subTitleText then
+            Create("TextLabel", {
+                Size = UDim2.new(1, 0, 0, 16),
+                BackgroundTransparency = 1,
+                Text = subTitleText,
+                TextColor3 = Color3.fromRGB(140, 140, 160),
+                Font = Enum.Font.Gotham,
+                TextSize = 11,
+                TextXAlignment = Enum.TextXAlignment.Left,
+                LayoutOrder = -1
+            }, page)
+        end
 
         if firstTab then
             firstTab = false
@@ -277,8 +363,8 @@ function Library:CreateWindow(config)
             for _, child in ipairs(NavContainer:GetChildren()) do
                 if child:IsA("TextButton") then
                     child.BackgroundColor3 = Color3.fromRGB(12, 12, 16)
-                    child.FindFirstChild(child, "Indicator").Visible = false
-                    child.FindFirstChild(child, "TextLabel").TextColor3 = Color3.fromRGB(180, 180, 200)
+                    child:FindFirstChild("Indicator").Visible = false
+                    child:FindFirstChild("TextLabel").TextColor3 = Color3.fromRGB(180, 180, 200)
                 end
             end
             btn.BackgroundColor3 = Color3.fromRGB(28, 24, 45)
@@ -291,9 +377,10 @@ function Library:CreateWindow(config)
 
         local TabMethods = {}
 
+        -- Título de Sección Morado
         function TabMethods:AddSection(secText)
             local sec = Create("TextLabel", {
-                Size = UDim2.new(1, 0, 0, 20),
+                Size = UDim2.new(1, 0, 0, 22),
                 BackgroundTransparency = 1,
                 Text = string.upper(secText),
                 TextColor3 = Color3.fromRGB(130, 100, 200),
@@ -304,6 +391,7 @@ function Library:CreateWindow(config)
             return sec
         end
 
+        -- Tarjeta de Toggle
         function TabMethods:CreateToggle(config, callback)
             local titleText = config.Name or "Toggle"
             local descText = config.Description or ""
@@ -311,7 +399,7 @@ function Library:CreateWindow(config)
             local currentState = defaultState
 
             local row = Create("Frame", {
-                Size = UDim2.new(1, -5, 0, descText ~= "" and 52 or 40),
+                Size = UDim2.new(1, -6, 0, descText ~= "" and 52 or 40),
                 BackgroundColor3 = Color3.fromRGB(24, 24, 30),
                 BorderSizePixel = 0
             }, page)
@@ -376,9 +464,7 @@ function Library:CreateWindow(config)
                 pcall(callback, currentState)
             end)
 
-            if defaultState then
-                pcall(callback, true)
-            end
+            if defaultState then pcall(callback, true) end
 
             return row
         end
