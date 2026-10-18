@@ -66,7 +66,7 @@ local function LoadConfig()
     if type(readfile) == "function" and type(isfile) == "function" then
         pcall(function()
             if isfile(ConfigFileName) then
-                local savedData = HttpService:JSONDecode(readfile(ConfigFileName))
+                local savedData = HttpService:JSONEncode(readfile(ConfigFileName))
                 if type(savedData) == "table" then
                     AutoExecuteActive = savedData.AutoExecute == true
                     AutoRejoinActive = savedData.AutoRejoin == true
@@ -203,7 +203,7 @@ local function equipBestFarmingPets(isCurrent)
     applyPetLoadout(selected, isCurrent)
 end
 
-local function equipSpecificPets(targetRepName, targetRebirthName, isCurrent)
+local function equipSpecificPets(targetRepName, isCurrent)
     if isCurrent and not isCurrent() then return end
     local pets = getOwnedConfiguredPets()
     local selected = {}
@@ -228,7 +228,7 @@ local function equipSpecificPets(targetRepName, targetRebirthName, isCurrent)
     applyPetLoadout(selected, isCurrent)
 end
 
-local function equipSpecificRebirthPets(targetRebirthName, isCurrent)
+local function equipStrictRebirthPets(targetRebirthName, isCurrent)
     if isCurrent and not isCurrent() then return end
     local pets = getOwnedConfiguredPets()
     local selected = {}
@@ -236,7 +236,15 @@ local function equipSpecificRebirthPets(targetRebirthName, isCurrent)
 
     for _, pet in ipairs(pets) do
         if equippedCount >= MAX_PET_SLOTS then break end
-        if pet.name == targetRebirthName or pet.rebirth > 0 then
+        if pet.name == targetRebirthName then
+            table.insert(selected, pet.instance)
+            equippedCount = equippedCount + 1
+        end
+    end
+
+    if equippedCount == 0 then
+        for _, pet in ipairs(pets) do
+            if equippedCount >= MAX_PET_SLOTS then break end
             table.insert(selected, pet.instance)
             equippedCount = equippedCount + 1
         end
@@ -445,9 +453,7 @@ local function runFastRebirthWorker(getStateRef, getGenRef, setGenRef, equipRepF
     end)
 end
 
-local combGen, combActive = 0, false
-local chaosGen, chaosActive = 0, false
-local titansGen, titansActive = 0, false
+local combGen, chaosGen, titansGen = 0, 0, 0
 
 local function triggerCombination()
     if RebirthsCombination then
@@ -467,8 +473,8 @@ local function triggerChaos()
             function() return RebirthChaos end,
             function() return chaosGen end,
             function(v) chaosGen = v end,
-            function(cb) equipSpecificPets("Swift Samurai", "Tribal Overlord", cb) end,
-            function(cb) equipSpecificRebirthPets("Tribal Overlord", cb) end
+            function(cb) equipSpecificPets("Swift Samurai", cb) end,
+            function(cb) equipStrictRebirthPets("Tribal Overlord", cb) end
         )
     end
 end
@@ -479,8 +485,8 @@ local function triggerTitans()
             function() return RebirthsTitans end,
             function() return titansGen end,
             function(v) titansGen = v end,
-            function(cb) equipSpecificPets("Omega Overlord", "Titanium Hydra", cb) end,
-            function(cb) equipSpecificRebirthPets("Titanium Hydra", cb) end
+            function(cb) equipSpecificPets("Omega Overlord", cb) end,
+            function(cb) equipStrictRebirthPets("Titanium Hydra", cb) end
         )
     end
 end
@@ -541,7 +547,7 @@ function Library:CreateWindow(config)
         BackgroundColor3 = Color3.fromRGB(18, 18, 22),
         BorderSizePixel = 0,
         Position = UDim2.new(0.5, 0, 0.5, 0),
-        Size = UDim2.new(0, 560, 0, 340),
+        Size = UDim2.new(0, 580, 0, 360),
         AnchorPoint = Vector2.new(0.5, 0.5)
     }, ScreenGui)
 
@@ -671,17 +677,26 @@ function Library:CreateWindow(config)
         Size = UDim2.new(1, -24, 0, 1)
     }, Sidebar)
 
-    local NavContainer = Create("Frame", {
+    -- ==================== CORRECCIÓN: SCROLLINGFRAME PARA EL MENÚ LATERAL ====================
+    local NavContainer = Create("ScrollingFrame", {
         Name = "NavContainer",
-        Size = UDim2.new(1, -10, 1, -64),
-        Position = UDim2.new(0, 5, 0, 62),
-        BackgroundTransparency = 1
+        Size = UDim2.new(1, -6, 1, -64),
+        Position = UDim2.new(0, 3, 0, 62),
+        BackgroundTransparency = 1,
+        BorderSizePixel = 0,
+        ScrollBarThickness = 3,
+        ScrollBarImageColor3 = Color3.fromRGB(120, 80, 255),
+        CanvasSize = UDim2.new(0, 0, 0, 0)
     }, Sidebar)
 
-    Create("UIListLayout", {
+    local navLayout = Create("UIListLayout", {
         Padding = UDim.new(0, 5),
         SortOrder = Enum.SortOrder.LayoutOrder
     }, NavContainer)
+
+    navLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+        NavContainer.CanvasSize = UDim2.new(0, 0, 0, navLayout.AbsoluteContentSize.Y + 10)
+    end)
 
     local ContentContainer = Create("Frame", {
         Name = "ContentContainer",
@@ -698,9 +713,11 @@ function Library:CreateWindow(config)
         ["Principal"] = "🏠",
         ["Farming"] = "🏋️",
         ["Rebirth"] = "🌌",
-        ["Settings"] = "⚙️",
-        ["Jefes"] = "👹",
-        ["Teletransporte"] = "🌀"
+        ["Auto Rocks"] = "🪨",
+        ["Stats"] = "📊",
+        ["Gift"] = "🎁",
+        ["Teleport"] = "🌀",
+        ["Settings"] = "⚙️"
     }
 
     function WindowObj:CreateTab(name, iconChar, subTitleText)
@@ -708,7 +725,7 @@ function Library:CreateWindow(config)
 
         local btn = Create("TextButton", {
             Name = name .. "TabBtn",
-            Size = UDim2.new(1, 0, 0, 32),
+            Size = UDim2.new(1, -6, 0, 32),
             BackgroundColor3 = Color3.fromRGB(12, 12, 16),
             BorderSizePixel = 0,
             Text = "",
@@ -756,6 +773,7 @@ function Library:CreateWindow(config)
             BackgroundTransparency = 1,
             BorderSizePixel = 0,
             ScrollBarThickness = 3,
+            ScrollBarImageColor3 = Color3.fromRGB(120, 80, 255),
             CanvasSize = UDim2.new(0, 0, 0, 0),
             Visible = false
         }, ContentContainer)
@@ -919,6 +937,53 @@ function Library:CreateWindow(config)
             return row
         end
 
+        function TabMethods:AddButton(text, callback)
+            local btn = Create("TextButton", {
+                Size = UDim2.new(1, -6, 0, 36),
+                BackgroundColor3 = Color3.fromRGB(28, 24, 45),
+                BorderSizePixel = 0,
+                Text = text,
+                TextColor3 = Color3.fromRGB(235, 235, 255),
+                Font = Enum.Font.GothamBold,
+                TextSize = 13,
+                AutoButtonColor = true
+            }, page)
+            Create("UICorner", {CornerRadius = UDim.new(0, 8)}, btn)
+
+            btn.MouseButton1Click:Connect(function()
+                pcall(callback)
+            end)
+            return btn
+        end
+
+        function TabMethods:AddTextBox(placeholder, callback)
+            local row = Create("Frame", {
+                Size = UDim2.new(1, -6, 0, 38),
+                BackgroundColor3 = Color3.fromRGB(24, 24, 30),
+                BorderSizePixel = 0
+            }, page)
+            Create("UICorner", {CornerRadius = UDim.new(0, 8)}, row)
+
+            local box = Create("TextBox", {
+                Size = UDim2.new(1, -20, 1, 0),
+                Position = UDim2.new(0, 10, 0, 0),
+                BackgroundTransparency = 1,
+                PlaceholderText = placeholder or "Escribe aquí...",
+                Text = "",
+                TextColor3 = Color3.fromRGB(240, 240, 250),
+                PlaceholderColor3 = Color3.fromRGB(120, 120, 140),
+                Font = Enum.Font.GothamMedium,
+                TextSize = 12,
+                TextXAlignment = Enum.TextXAlignment.Left
+            }, row)
+
+            box.FocusLost:Connect(function(enterPressed)
+                pcall(callback, box.Text)
+            end)
+
+            return box
+        end
+
         return TabMethods
     end
 
@@ -935,6 +1000,10 @@ local Window = Library:CreateWindow({
 local PrincipalTab = Window:CreateTab("Principal", "🏠", "Bienvenido al script, " .. LP.Name)
 local FarmingTab = Window:CreateTab("Farming", "🏋️", "Automatización de recursos")
 local RebirthTab = Window:CreateTab("Rebirth", "🌌", "Sistema de reencarnaciones")
+local RocksTab = Window:CreateTab("Auto Rocks", "🪨", "Farming automático de rocas")
+local StatsTab = Window:CreateTab("Stats", "📊", "Calculadoras y monitoreo en tiempo real")
+local GiftTab = Window:CreateTab("Gift", "🎁", "Regalar consumibles a otros jugadores")
+local TeleportTab = Window:CreateTab("Teleport", "🌀", "Viaja por el mapa")
 local SettingsTab = Window:CreateTab("Settings", "⚙️", "Configuración y automatización")
 
 -- ==================== PESTAÑA PRINCIPAL ====================
@@ -1055,7 +1124,7 @@ RebirthTab:AddSection("Fast Rebirth")
 
 RebirthTab:CreateToggle({
     Name = "Auto Rebirths combination",
-    Description = "",
+    Description = "Equipa mejores pets de repetición -> fuerza -> pets de rebirth -> renace",
     Default = false
 }, function(state)
     RebirthsCombination = state
@@ -1105,6 +1174,459 @@ RebirthTab:CreateToggle({
         FastFarm500 = true
         triggerTitans()
     end
+end)
+
+-- ==================== PESTAÑA AUTO ROCKS ====================
+RocksTab:AddSection("Farming de Rocas")
+
+local activeRock = nil
+
+local function getrocktool()
+    local backpack = LP:FindFirstChild("Backpack")
+    local char = LP.Character
+    if backpack and char and char:FindFirstChild("Humanoid") then
+        local punch = backpack:FindFirstChild("Punch") or char:FindFirstChild("Punch")
+        if punch and punch.Parent == backpack then
+            char.Humanoid:EquipTool(punch)
+        end
+    end
+    pcall(function()
+        if LP:FindFirstChild("muscleEvent") then
+            LP.muscleEvent:FireServer("punch", "leftHand")
+            LP.muscleEvent:FireServer("punch", "rightHand")
+        end
+    end)
+end
+
+local rockList = {
+    { Name = "Farm Tiny Island Rock", MinDur = 0, DurVal = 0 },
+    { Name = "Farm Starter Island Rock", MinDur = 100, DurVal = 100 },
+    { Name = "Farm Legend Beach Rock", MinDur = 5000, DurVal = 5000 },
+    { Name = "Farm Frost Gym Rock", MinDur = 150000, DurVal = 150000 },
+    { Name = "Farm Mythical Gym Rock", MinDur = 400000, DurVal = 400000 },
+    { Name = "Farm Eternal Gym Rock", MinDur = 750000, DurVal = 750000 },
+    { Name = "Farm Legend Gym Rock", MinDur = 1000000, DurVal = 1000000 },
+    { Name = "Farm Muscle King Gym Rock", MinDur = 5000000, DurVal = 5000000 },
+    { Name = "Farm Ancient Jungle Rock", MinDur = 10000000, DurVal = 10000000 },
+}
+
+for _, rockInfo in ipairs(rockList) do
+    RocksTab:CreateToggle({
+        Name = rockInfo.Name,
+        Description = "Requiere " .. rockInfo.MinDur .. " de Durabilidad",
+        Default = false
+    }, function(bool)
+        if bool then
+            activeRock = rockInfo.Name
+            task.spawn(function()
+                while activeRock == rockInfo.Name do
+                    task.wait(0.01)
+                    pcall(function()
+                        local durabilityObj = LP:FindFirstChild("Durability")
+                        if durabilityObj and durabilityObj.Value >= rockInfo.MinDur then
+                            getrocktool()
+                            local machinesFolder = workspace:FindFirstChild("machinesFolder")
+                            if machinesFolder then
+                                for _, v in pairs(machinesFolder:GetDescendants()) do
+                                    if v.Name == "neededDurability" and v.Value == rockInfo.DurVal then
+                                        local rockPart = v.Parent and v.Parent:FindFirstChild("Rock")
+                                        local char = LP.Character
+                                        if rockPart and char then
+                                            local rightHand = char:FindFirstChild("RightHand")
+                                            local leftHand = char:FindFirstChild("LeftHand")
+                                            if rightHand and leftHand then
+                                                firetouchinterest(rockPart, rightHand, 0)
+                                                firetouchinterest(rockPart, rightHand, 1)
+                                                firetouchinterest(rockPart, leftHand, 0)
+                                                firetouchinterest(rockPart, leftHand, 1)
+                                            end
+                                        end
+                                    end
+                                end
+                            end
+                        end
+                    end)
+                end
+            end)
+        else
+            if activeRock == rockInfo.Name then
+                activeRock = nil
+            end
+        end
+    end)
+end
+
+-- ==================== PESTAÑA STATS & CALCULATOR ====================
+StatsTab:AddSection("Monitoreo en Tiempo Real")
+
+local stopwatchLabel = StatsTab:AddButton("Fast Rep Time: 0d 0h 0m 0s", function() end)
+local projectedStrengthLabel = StatsTab:AddButton("Strength Rate: 0 /Hour", function() end)
+local projectedDurabilityLabel = StatsTab:AddButton("Durability Rate: 0 /Hour", function() end)
+
+StatsTab:AddSection("Progreso de Estadísticas")
+local strengthLabel = StatsTab:AddButton("Strength: 0 | Gained: 0", function() end)
+local durabilityLabel = StatsTab:AddButton("Durability: 0 | Gained: 0", function() end)
+
+local leaderstats = LP:WaitForChild("leaderstats")
+local strengthStat = leaderstats:WaitForChild("Strength")
+local durabilityStat = LP:WaitForChild("Durability")
+
+local function formatNumber(number)
+    local isNegative = number < 0
+    number = math.abs(number)
+    if number >= 1e15 then return (isNegative and "-" or "") .. string.format("%.2fQa", number / 1e15)
+    elseif number >= 1e12 then return (isNegative and "-" or "") .. string.format("%.2fT", number / 1e12)
+    elseif number >= 1e9 then return (isNegative and "-" or "") .. string.format("%.2fB", number / 1e9)
+    elseif number >= 1e6 then return (isNegative and "-" or "") .. string.format("%.2fM", number / 1e6)
+    elseif number >= 1e3 then return (isNegative and "-" or "") .. string.format("%.2fK", number / 1e3)
+    else return (isNegative and "-" or "") .. string.format("%.2f", number) end
+end
+
+local startTime = tick()
+local initialStrength = strengthStat.Value
+local initialDurability = durabilityStat.Value
+local trackingStarted = false
+local strengthHistory = {}
+local durabilityHistory = {}
+local calculationInterval = 10
+
+task.spawn(function()
+    local lastCalcTime = tick()
+    while true do
+        local currentTime = tick()
+        local currentStrength = strengthStat.Value
+        local currentDurability = durabilityStat.Value
+        if not trackingStarted and (currentStrength - initialStrength) >= 100e9 then
+            trackingStarted = true
+            startTime = tick()
+            strengthHistory = {}
+            durabilityHistory = {}
+        end
+        if trackingStarted then
+            local elapsedTime = currentTime - startTime
+            local days = math.floor(elapsedTime / (24 * 3600))
+            local hours = math.floor((elapsedTime % (24 * 3600)) / 3600)
+            local minutes = math.floor((elapsedTime % 3600) / 60)
+            local seconds = math.floor(elapsedTime % 60)
+            stopwatchLabel.Text = string.format("Fast Rep Time: %dd %dh %dm %ds", days, hours, minutes, seconds)
+            
+            local sessionStrengthDelta = currentStrength - initialStrength
+            local sessionDurabilityDelta = currentDurability - initialDurability
+            strengthLabel.Text = "Strength: " .. formatNumber(currentStrength) .. " | Gained: " .. formatNumber(sessionStrengthDelta)
+            durabilityLabel.Text = "Durability: " .. formatNumber(currentDurability) .. " | Gained: " .. formatNumber(sessionDurabilityDelta)
+            
+            table.insert(strengthHistory, {time = currentTime, value = currentStrength})
+            table.insert(durabilityHistory, {time = currentTime, value = currentDurability})
+            while #strengthHistory > 0 and currentTime - strengthHistory[1].time > calculationInterval do table.remove(strengthHistory, 1) end
+            while #durabilityHistory > 0 and currentTime - durabilityHistory[1].time > calculationInterval do table.remove(durabilityHistory, 1) end
+            
+            if currentTime - lastCalcTime >= calculationInterval then
+                lastCalcTime = currentTime
+                if #strengthHistory >= 2 then
+                    local strengthDelta = strengthHistory[#strengthHistory].value - strengthHistory[1].value
+                    local strengthPerSecond = strengthDelta / calculationInterval
+                    local strengthPerHour = math.floor(strengthPerSecond * 3600)
+                    local strengthPerDay = math.floor(strengthPerSecond * 86400)
+                    projectedStrengthLabel.Text = "Strength: " .. formatNumber(strengthPerHour) .. "/H | " .. formatNumber(strengthPerDay) .. "/D"
+                end
+                if #durabilityHistory >= 2 then
+                    local durabilityDelta = durabilityHistory[#durabilityHistory].value - durabilityHistory[1].value
+                    local durabilityPerSecond = durabilityDelta / calculationInterval
+                    local durabilityPerHour = math.floor(durabilityPerSecond * 3600)
+                    local durabilityPerDay = math.floor(durabilityPerSecond * 86400)
+                    projectedDurabilityLabel.Text = "Durability: " .. formatNumber(durabilityPerHour) .. "/H | " .. formatNumber(durabilityPerDay) .. "/D"
+                end
+            end
+        end
+        task.wait(0.05)
+    end
+end)
+
+-- ==================== PESTAÑA GIFT ====================
+GiftTab:AddSection("Monitoreo de Consumibles")
+
+local proteinEggBtn = GiftTab:AddButton("Protein Eggs: 0", function() end)
+local tropicalShakeBtn = GiftTab:AddButton("Tropical Shakes: 0", function() end)
+
+local function updateItemCounts()
+    local proteinEggCount = 0
+    local tropicalShakeCount = 0
+    
+    local backpack = LP:FindFirstChild("Backpack")
+    if backpack then
+        for _, item in ipairs(backpack:GetChildren()) do
+            if item.Name == "Protein Egg" then
+                proteinEggCount = proteinEggCount + 1
+            elseif item.Name == "Tropical Shake" or item.Name == "Piñas" then
+                tropicalShakeCount = tropicalShakeCount + 1
+            end
+        end
+    end
+    
+    local consumablesFolder = LP:FindFirstChild("consumablesFolder")
+    if consumablesFolder then
+        for _, item in ipairs(consumablesFolder:GetChildren()) do
+            if item.Name == "Protein Egg" then
+                proteinEggCount = proteinEggCount + 1
+            elseif item.Name == "Tropical Shake" then
+                tropicalShakeCount = tropicalShakeCount + 1
+            end
+        end
+    end
+
+    proteinEggBtn.Text = "Protein Eggs: " .. proteinEggCount
+    tropicalShakeBtn.Text = "Tropical Shakes: " .. tropicalShakeCount
+end
+
+task.spawn(function()
+    while true do
+        updateItemCounts()
+        task.wait(1)
+    end
+end)
+
+GiftTab:AddSection("Actualizar Lista")
+
+GiftTab:AddButton("🔄 Refresh Players / Items", function()
+    updateItemCounts()
+    pcall(function()
+        StarterGui:SetCore("SendNotification", {
+            Title = "SLK Paid Hub",
+            Text = "Lista de jugadores y consumibles actualizada! 🔄",
+            Duration = 3
+        })
+    end)
+end)
+
+GiftTab:AddSection("Regalar Protein Eggs")
+
+local targetEggPlayerName = ""
+local giftEggAmount = 0
+
+GiftTab:AddTextBox("Nombre del jugador (Username)", function(text)
+    targetEggPlayerName = text
+end)
+
+GiftTab:AddTextBox("Cantidad de Eggs", function(text)
+    giftEggAmount = tonumber(text) or 0
+end)
+
+GiftTab:AddButton("Gift Protein Eggs", function()
+    if targetEggPlayerName == "" or giftEggAmount <= 0 then
+        StarterGui:SetCore("SendNotification", { Title = "Gift Error", Text = "Escribe un jugador y cantidad válida.", Duration = 3 })
+        return
+    end
+
+    local targetPlayer = nil
+    for _, plr in ipairs(Players:GetPlayers()) do
+        if plr.Name:lower() == targetEggPlayerName:lower() or plr.DisplayName:lower() == targetEggPlayerName:lower() then
+            targetPlayer = plr
+            break
+        end
+    end
+
+    if not targetPlayer then
+        StarterGui:SetCore("SendNotification", { Title = "Gift Error", Text = "Jugador no encontrado.", Duration = 3 })
+        return
+    end
+
+    task.spawn(function()
+        local countSent = 0
+        local giftRemote = ReplicatedStorage:FindFirstChild("rEvents") and ReplicatedStorage.rEvents:FindFirstChild("giftRemote")
+        local consumablesFolder = LP:FindFirstChild("consumablesFolder")
+        
+        if giftRemote and consumablesFolder then
+            for i = 1, giftEggAmount do
+                local egg = consumablesFolder:FindFirstChild("Protein Egg")
+                if egg then
+                    pcall(function()
+                        if giftRemote:IsA("RemoteFunction") then
+                            giftRemote:InvokeServer("giftRequest", targetPlayer, egg)
+                        else
+                            giftRemote:FireServer("giftRequest", targetPlayer, egg)
+                        end
+                    end)
+                    countSent = countSent + 1
+                    task.wait(0.15)
+                else
+                    break
+                end
+            end
+        end
+        updateItemCounts()
+        StarterGui:SetCore("SendNotification", { Title = "Gift Finalizado", Text = "Se regalaron " .. countSent .. " Protein Eggs a " .. targetPlayer.DisplayName, Duration = 4 })
+    end)
+end)
+
+GiftTab:AddSection("Regalar Tropical Shakes")
+
+local targetShakePlayerName = ""
+local giftShakeAmount = 0
+
+GiftTab:AddTextBox("Nombre del jugador (Username)", function(text)
+    targetShakePlayerName = text
+end)
+
+GiftTab:AddTextBox("Cantidad de Shakes", function(text)
+    giftShakeAmount = tonumber(text) or 0
+end)
+
+GiftTab:AddButton("Gift Tropical Shakes", function()
+    if targetShakePlayerName == "" or giftShakeAmount <= 0 then
+        StarterGui:SetCore("SendNotification", { Title = "Gift Error", Text = "Escribe un jugador y cantidad válida.", Duration = 3 })
+        return
+    end
+
+    local targetPlayer = nil
+    for _, plr in ipairs(Players:GetPlayers()) do
+        if plr.Name:lower() == targetShakePlayerName:lower() or plr.DisplayName:lower() == targetShakePlayerName:lower() then
+            targetPlayer = plr
+            break
+        end
+    end
+
+    if not targetPlayer then
+        StarterGui:SetCore("SendNotification", { Title = "Gift Error", Text = "Jugador no encontrado.", Duration = 3 })
+        return
+    end
+
+    task.spawn(function()
+        local countSent = 0
+        local giftRemote = ReplicatedStorage:FindFirstChild("rEvents") and ReplicatedStorage.rEvents:FindFirstChild("giftRemote")
+        local consumablesFolder = LP:FindFirstChild("consumablesFolder")
+        
+        if giftRemote and consumablesFolder then
+            for i = 1, giftShakeAmount do
+                local shake = consumablesFolder:FindFirstChild("Tropical Shake")
+                if shake then
+                    pcall(function()
+                        if giftRemote:IsA("RemoteFunction") then
+                            giftRemote:InvokeServer("giftRequest", targetPlayer, shake)
+                        else
+                            giftRemote:FireServer("giftRequest", targetPlayer, shake)
+                        end
+                    end)
+                    countSent = countSent + 1
+                    task.wait(0.15)
+                else
+                    break
+                end
+            end
+        end
+        updateItemCounts()
+        StarterGui:SetCore("SendNotification", { Title = "Gift Finalizado", Text = "Se regalaron " .. countSent .. " Tropical Shakes a " .. targetPlayer.DisplayName, Duration = 4 })
+    end)
+end)
+
+GiftTab:AddSection("Auto Consumir")
+
+local itemList = {
+    "Tropical Shake", "Energy Shake", "Protein Bar", "TOUGH Bar", "Protein Shake", "ULTRA Shake", "Energy Bar"
+}
+
+local function formatEventName(itemName)
+    local parts = {}
+    for word in itemName:gmatch("%S+") do table.insert(parts, word:lower()) end
+    for i = 2, #parts do parts[i] = parts[i]:sub(1, 1):upper() .. parts[i]:sub(2) end
+    return table.concat(parts)
+end
+
+local function activateRandomItems(count)
+    local shuffledItems = {}
+    for _, item in ipairs(itemList) do table.insert(shuffledItems, item) end
+    for i = #shuffledItems, 2, -1 do
+        local j = math.random(i)
+        shuffledItems[i], shuffledItems[j] = shuffledItems[j], shuffledItems[i]
+    end
+    for i = 1, math.min(count, #shuffledItems) do
+        local char = LP.Character
+        local backpack = LP:FindFirstChild("Backpack")
+        local tool = (char and char:FindFirstChild(shuffledItems[i])) or (backpack and backpack:FindFirstChild(shuffledItems[i]))
+        if tool and LP:FindFirstChild("muscleEvent") then
+            local eventName = formatEventName(shuffledItems[i])
+            pcall(function() LP.muscleEvent:FireServer(eventName, tool) end)
+        end
+    end
+end
+
+GiftTab:CreateToggle({
+    Name = "Eat Everything",
+    Description = "Consume consumibles aleatorios automáticamente",
+    Default = false
+}, function(state)
+    getgenv().autoEatRunning = state
+    if state then
+        task.spawn(function()
+            while getgenv().autoEatRunning do
+                activateRandomItems(4)
+                task.wait(0.5)
+            end
+        end)
+    end
+end)
+
+-- ==================== PESTAÑA TELETRANSPORTE ====================
+TeleportTab:AddSection("Zonas del Mapa")
+
+local function tpTo(cf, name)
+    pcall(function()
+        local character = LP.Character or LP.CharacterAdded:Wait()
+        local humanoidRootPart = character:WaitForChild("HumanoidRootPart")
+        humanoidRootPart.CFrame = cf
+        StarterGui:SetCore("SendNotification", {
+            Title = "Teletransporte",
+            Text = "Teleported to " .. name,
+            Duration = 3
+        })
+    end)
+end
+
+TeleportTab:AddButton("Spawn", function()
+    tpTo(CFrame.new(2, 8, 115), "Spawn")
+end)
+
+TeleportTab:AddButton("Secret Area", function()
+    tpTo(CFrame.new(1947, 2, 6191), "Secret Area")
+end)
+
+TeleportTab:AddButton("Tiny Island", function()
+    tpTo(CFrame.new(-34, 7, 1903), "Tiny Island")
+end)
+
+TeleportTab:AddButton("Frozen Island", function()
+    tpTo(CFrame.new(-2600.00244, 3.67686558, -403.884369, 0.0873617008, 1.0482899e-09, 0.99617666, 3.07204253e-08, 1, -3.7464023e-09, -0.99617666, 3.09302628e-08, 0.0873617008), "Frozen Island")
+end)
+
+TeleportTab:AddButton("Mythical Island", function()
+    tpTo(CFrame.new(2255, 7, 1071), "Mythical Island")
+end)
+
+TeleportTab:AddButton("***** Island", function()
+    tpTo(CFrame.new(-6768, 7, -1287), "***** Island")
+end)
+
+TeleportTab:AddButton("Legend Island", function()
+    tpTo(CFrame.new(4604, 991, -3887), "Legend Island")
+end)
+
+TeleportTab:AddButton("Muscle King Island", function()
+    tpTo(CFrame.new(-8646, 17, -5738), "Muscle King")
+end)
+
+TeleportTab:AddButton("Jungle Island", function()
+    tpTo(CFrame.new(-8659, 6, 2384), "Jungle Island")
+end)
+
+TeleportTab:AddButton("Brawl Lava", function()
+    tpTo(CFrame.new(4471, 119, -8836), "Brawl Lava")
+end)
+
+TeleportTab:AddButton("Brawl Desert", function()
+    tpTo(CFrame.new(960, 17, -7398), "Brawl Desert")
+end)
+
+TeleportTab:AddButton("Brawl Regular", function()
+    tpTo(CFrame.new(-1849, 20, -6335), "Brawl Regular")
 end)
 
 -- ==================== PESTAÑA SETTINGS / CONFIG ====================
