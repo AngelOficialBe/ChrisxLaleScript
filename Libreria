@@ -1,0 +1,427 @@
+
+
+local Library = {}
+local TweenService = game:GetService("TweenService")
+local RunService = game:GetService("RunService")
+local Players = game:GetService("Players")
+local CoreGui = game:GetService("CoreGui")
+local UserInputService = game:GetService("UserInputService")
+local Player = Players.LocalPlayer
+
+local function Create(className, properties, parent)
+    local instance = Instance.new(className)
+    for property, value in pairs(properties) do
+        instance[property] = value
+    end
+    if parent then
+        instance.Parent = parent
+    end
+    return instance
+end
+
+local function MakeDraggable(topbar, object)
+    local dragging, dragInput, dragStart, startPos
+    
+    topbar.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            dragging = true
+            dragStart = input.Position
+            startPos = object.Position
+            
+            input.Changed:Connect(function()
+                if input.UserInputState == Enum.UserInputState.End then
+                    dragging = false
+                end
+            end)
+        end
+    end)
+    
+    topbar.InputChanged:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+            dragInput = input
+        end
+    end)
+    
+    UserInputService.InputChanged:Connect(function(input)
+        if input == dragInput and dragging then
+            local delta = input.Position - dragStart
+            object.Position = UDim2.new(
+                startPos.X.Scale, startPos.X.Offset + delta.X,
+                startPos.Y.Scale, startPos.Y.Offset + delta.Y
+            )
+        end
+    end)
+end
+
+function Library:CreateWindow(config)
+    local windowTitle = config.Title or "ERDN Script Hub"
+    local miniIconId = config.Icon or "rbxassetid://6031097225" 
+    
+    local ScreenGui = Create("ScreenGui", {
+        Name = "SLK_UILibrary",
+        ZIndexBehavior = Enum.ZIndexBehavior.Sibling,
+        IgnoreGuiInset = true
+    }, RunService:IsStudio() and Player.PlayerGui or (gethui and gethui() or CoreGui))
+
+    -- Ventana Principal Borde RGB
+    local MainRGBFrame = Create("Frame", {
+        Name = "MainRGBFrame",
+        BackgroundColor3 = Color3.fromRGB(255, 255, 255),
+        BorderSizePixel = 0,
+        Position = UDim2.new(0.5, 0, 0.5, 0),
+        Size = UDim2.new(0, 554, 0, 334),
+        AnchorPoint = Vector2.new(0.5, 0.5)
+    }, ScreenGui)
+
+    Create("UICorner", {CornerRadius = UDim.new(0, 10)}, MainRGBFrame)
+
+    local MainGradient = Create("UIGradient", {
+        Color = ColorSequence.new({
+            ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 0, 0)),
+            ColorSequenceKeypoint.new(0.2, Color3.fromRGB(255, 128, 0)),
+            ColorSequenceKeypoint.new(0.4, Color3.fromRGB(255, 255, 0)),
+            ColorSequenceKeypoint.new(0.6, Color3.fromRGB(0, 255, 0)),
+            ColorSequenceKeypoint.new(0.8, Color3.fromRGB(0, 128, 255)),
+            ColorSequenceKeypoint.new(1, Color3.fromRGB(128, 0, 255))
+        }),
+        Rotation = 0
+    }, MainRGBFrame)
+
+    local MainFrame = Create("Frame", {
+        Name = "MainFrame",
+        BackgroundColor3 = Color3.fromRGB(18, 18, 18),
+        BorderSizePixel = 0,
+        Position = UDim2.new(0.5, 0, 0.5, 0),
+        Size = UDim2.new(1, -4, 1, -4),
+        AnchorPoint = Vector2.new(0.5, 0.5)
+    }, MainRGBFrame)
+
+    Create("UICorner", {CornerRadius = UDim.new(0, 8)}, MainFrame)
+
+    -- Cuadro Minimizado con Borde RGB
+    local MiniRGBFrame = Create("Frame", {
+        Name = "MiniRGBFrame",
+        BackgroundColor3 = Color3.fromRGB(255, 255, 255),
+        BorderSizePixel = 0,
+        Position = MainRGBFrame.Position,
+        Size = UDim2.new(0, 54, 0, 54),
+        AnchorPoint = Vector2.new(0.5, 0.5),
+        Visible = false,
+        Active = true
+    }, ScreenGui)
+
+    Create("UICorner", {CornerRadius = UDim.new(0, 12)}, MiniRGBFrame)
+    local MiniGradient = Create("UIGradient", {Color = MainGradient.Color}, MiniRGBFrame)
+
+    local MiniBox = Create("Frame", {
+        Name = "MiniBox",
+        BackgroundColor3 = Color3.fromRGB(12, 12, 12),
+        BorderSizePixel = 0,
+        Position = UDim2.new(0.5, 0, 0.5, 0),
+        Size = UDim2.new(1, -4, 1, -4),
+        AnchorPoint = Vector2.new(0.5, 0.5)
+    }, MiniRGBFrame)
+
+    Create("UICorner", {CornerRadius = UDim.new(0, 10)}, MiniBox)
+
+    Create("ImageLabel", {
+        Name = "MiniIcon",
+        BackgroundTransparency = 1,
+        Position = UDim2.new(0.5, 0, 0.5, 0),
+        Size = UDim2.new(0, 30, 0, 30),
+        AnchorPoint = Vector2.new(0.5, 0.5),
+        Image = miniIconId
+    }, MiniBox)
+
+    -- Loop Animación RGB
+    task.spawn(function()
+        while ScreenGui.Parent do
+            MainGradient.Rotation = (MainGradient.Rotation + 2) % 360
+            MiniGradient.Rotation = MainGradient.Rotation
+            task.wait(0.03)
+        end
+    end)
+
+    -- Barra Superior Negra
+    local TopBar = Create("Frame", {
+        Name = "TopBar",
+        BackgroundColor3 = Color3.fromRGB(10, 10, 10),
+        BorderSizePixel = 0,
+        Size = UDim2.new(1, 0, 0, 32)
+    }, MainFrame)
+
+    Create("UICorner", {CornerRadius = UDim.new(0, 8)}, TopBar)
+    Create("Frame", {
+        BackgroundColor3 = Color3.fromRGB(10, 10, 10),
+        BorderSizePixel = 0,
+        Position = UDim2.new(0, 0, 1, -5),
+        Size = UDim2.new(1, 0, 0, 5)
+    }, TopBar)
+
+    Create("TextLabel", {
+        Font = Enum.Font.GothamBold,
+        Text = windowTitle,
+        TextColor3 = Color3.fromRGB(255, 255, 255),
+        TextSize = 14,
+        BackgroundTransparency = 1,
+        Position = UDim2.new(0, 12, 0, 0),
+        Size = UDim2.new(0, 200, 1, 0),
+        TextXAlignment = Enum.TextXAlignment.Left
+    }, TopBar)
+
+    local CloseButton = Create("TextButton", {
+        Font = Enum.Font.GothamBold,
+        Text = "×",
+        TextColor3 = Color3.fromRGB(255, 255, 255),
+        TextSize = 18,
+        BackgroundColor3 = Color3.fromRGB(200, 50, 50),
+        BackgroundTransparency = 1,
+        Position = UDim2.new(1, -30, 0, 4),
+        Size = UDim2.new(0, 24, 0, 24)
+    }, TopBar)
+    Create("UICorner", {CornerRadius = UDim.new(0, 6)}, CloseButton)
+
+    CloseButton.MouseButton1Click:Connect(function()
+        ScreenGui:Destroy()
+    end)
+
+    local MinimizeButton = Create("TextButton", {
+        Font = Enum.Font.GothamBold,
+        Text = "-",
+        TextColor3 = Color3.fromRGB(255, 255, 255),
+        TextSize = 16,
+        BackgroundColor3 = Color3.fromRGB(50, 50, 50),
+        BackgroundTransparency = 1,
+        Position = UDim2.new(1, -60, 0, 4),
+        Size = UDim2.new(0, 24, 0, 24)
+    }, TopBar)
+    Create("UICorner", {CornerRadius = UDim.new(0, 6)}, MinimizeButton)
+
+    MinimizeButton.MouseButton1Click:Connect(function()
+        MainRGBFrame.Visible = false
+        MiniRGBFrame.Position = MainRGBFrame.Position
+        MiniRGBFrame.Visible = true
+    end)
+
+    MakeDraggable(MiniRGBFrame, MiniRGBFrame)
+    MakeDraggable(TopBar, MainRGBFrame)
+
+    MiniRGBFrame.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            local startTime = tick()
+            local connection
+            connection = input.Changed:Connect(function()
+                if input.UserInputState == Enum.UserInputState.End then
+                    connection:Disconnect()
+                    if tick() - startTime < 0.25 then
+                        MainRGBFrame.Position = MiniRGBFrame.Position
+                        MiniRGBFrame.Visible = false
+                        MainRGBFrame.Visible = true
+                    end
+                end
+            end)
+        end
+    end)
+
+    -- Contenedor Principal
+    local Container = Create("Frame", {
+        Name = "Container",
+        BackgroundTransparency = 1,
+        Position = UDim2.new(0, 0, 0, 32),
+        Size = UDim2.new(1, 0, 1, -32)
+    }, MainFrame)
+
+    -- Sidebar 
+    local Sidebar = Create("Frame", {
+        Name = "Sidebar",
+        BackgroundColor3 = Color3.fromRGB(14, 14, 14),
+        BorderSizePixel = 0,
+        Position = UDim2.new(0, 0, 0, 0),
+        Size = UDim2.new(0, 150, 1, 0)
+    }, Container)
+
+    -- Foto y datos de usuario
+    local AvatarImage = Create("ImageLabel", {
+        Name = "AvatarImage",
+        BackgroundColor3 = Color3.fromRGB(30, 30, 30),
+        BorderSizePixel = 0,
+        Position = UDim2.new(0, 12, 0, 12),
+        Size = UDim2.new(0, 40, 0, 40),
+        Image = Players:GetUserThumbnailAsync(Player.UserId, Enum.ThumbnailType.HeadShot, Enum.ThumbnailSize.Size150x150)
+    }, Sidebar)
+    Create("UICorner", {CornerRadius = UDim.new(1, 0)}, AvatarImage)
+
+    Create("TextLabel", {
+        Font = Enum.Font.GothamBold,
+        Text = Player.Name,
+        TextColor3 = Color3.fromRGB(240, 240, 240),
+        TextSize = 11,
+        BackgroundTransparency = 1,
+        Position = UDim2.new(0, 58, 0, 14),
+        Size = UDim2.new(0, 80, 0, 18),
+        TextXAlignment = Enum.TextXAlignment.Left,
+        TextTruncate = Enum.TextTruncate.AtEnd
+    }, Sidebar)
+
+    Create("TextLabel", {
+        Font = Enum.Font.Gotham,
+        Text = "VIP User",
+        TextColor3 = Color3.fromRGB(140, 140, 140),
+        TextSize = 10,
+        BackgroundTransparency = 1,
+        Position = UDim2.new(0, 58, 0, 30),
+        Size = UDim2.new(0, 80, 0, 14),
+        TextXAlignment = Enum.TextXAlignment.Left
+    }, Sidebar)
+
+    Create("Frame", {
+        BackgroundColor3 = Color3.fromRGB(30, 30, 30),
+        BorderSizePixel = 0,
+        Position = UDim2.new(0, 12, 0, 62),
+        Size = UDim2.new(1, -24, 0, 1)
+    }, Sidebar)
+
+    -- Contenedor de Botones de Pestañas
+    local TabButtonsScroll = Create("ScrollingFrame", {
+        Name = "TabButtonsScroll",
+        BackgroundTransparency = 1,
+        BorderSizePixel = 0,
+        Position = UDim2.new(0, 0, 0, 72),
+        Size = UDim2.new(1, 0, 1, -78),
+        CanvasSize = UDim2.new(0, 0, 0, 0),
+        ScrollBarThickness = 2
+    }, Sidebar)
+
+    local TabButtonsLayout = Create("UIListLayout", {
+        HorizontalAlignment = Enum.HorizontalAlignment.Center,
+        SortOrder = Enum.SortOrder.LayoutOrder,
+        Padding = UDim.new(0, 6)
+    }, TabButtonsScroll)
+
+    -- Contenedor de Páginas (Derecha)
+    local PagesContainer = Create("Frame", {
+        Name = "PagesContainer",
+        BackgroundTransparency = 1,
+        Position = UDim2.new(0, 155, 0, 0),
+        Size = UDim2.new(1, -155, 1, 0)
+    }, Container)
+
+    local WindowObj = {}
+    local firstTab = true
+
+    -- Crear Pestaña
+    function WindowObj:CreateTab(tabName)
+        local TabButton = Create("TextButton", {
+            Font = Enum.Font.GothamMedium,
+            Text = "  " .. tabName,
+            TextColor3 = Color3.fromRGB(160, 160, 160),
+            TextSize = 13,
+            BackgroundColor3 = Color3.fromRGB(25, 25, 25),
+            BackgroundTransparency = 1,
+            Size = UDim2.new(1, -16, 0, 32),
+            TextXAlignment = Enum.TextXAlignment.Left
+        }, TabButtonsScroll)
+
+        Create("UICorner", {CornerRadius = UDim.new(0, 6)}, TabButton)
+
+        local TabPage = Create("ScrollingFrame", {
+            Name = tabName .. "Page",
+            BackgroundTransparency = 1,
+            BorderSizePixel = 0,
+            Position = UDim2.new(0, 12, 0, 12),
+            Size = UDim2.new(1, -24, 1, -24),
+            CanvasSize = UDim2.new(0, 0, 0, 0),
+            ScrollBarThickness = 3,
+            Visible = false
+        }, PagesContainer)
+
+        local PageLayout = Create("UIListLayout", {
+            SortOrder = Enum.SortOrder.LayoutOrder,
+            Padding = UDim.new(0, 8)
+        }, TabPage)
+
+        PageLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+            TabPage.CanvasSize = UDim2.new(0, 0, 0, PageLayout.AbsoluteContentSize.Y + 10)
+        end)
+
+        if firstTab then
+            firstTab = false
+            TabPage.Visible = true
+            TabButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+            TabButton.BackgroundTransparency = 0.2
+        end
+
+        TabButton.MouseButton1Click:Connect(function()
+            for _, page in ipairs(PagesContainer:GetChildren()) do
+                if page:IsA("ScrollingFrame") then page.Visible = false end
+            end
+            for _, btn in ipairs(TabButtonsScroll:GetChildren()) do
+                if btn:IsA("TextButton") then
+                    btn.TextColor3 = Color3.fromRGB(160, 160, 160)
+                    btn.BackgroundTransparency = 1
+                end
+            end
+            TabPage.Visible = true
+            TabButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+            TabButton.BackgroundTransparency = 0.2
+        end)
+
+        -- Métodos internos
+        local TabElements = {}
+
+        function TabElements:CreateToggle(config, callback)
+            local toggleName = config.Name or "Toggle"
+            local defaultState = config.Default or false
+            local currentState = defaultState
+
+            local ToggleButton = Create("TextButton", {
+                Font = Enum.Font.GothamMedium,
+                Text = "  " .. toggleName,
+                TextColor3 = Color3.fromRGB(200, 200, 200),
+                TextSize = 12,
+                BackgroundColor3 = Color3.fromRGB(25, 25, 25),
+                BackgroundTransparency = 0.2,
+                Size = UDim2.new(1, -6, 0, 36),
+                TextXAlignment = Enum.TextXAlignment.Left
+            }, TabPage)
+
+            Create("UICorner", {CornerRadius = UDim.new(0, 6)}, ToggleButton)
+
+            local StatusIndicator = Create("Frame", {
+                BackgroundColor3 = currentState and Color3.fromRGB(0, 255, 100) or Color3.fromRGB(60, 60, 60),
+                BorderSizePixel = 0,
+                Position = UDim2.new(1, -28, 0.5, -9),
+                Size = UDim2.new(0, 18, 0, 18),
+                AnchorPoint = Vector2.new(0, 0.5)
+            }, ToggleButton)
+
+            Create("UICorner", {CornerRadius = UDim.new(1, 0)}, StatusIndicator)
+
+            local function updateToggle()
+                if currentState then
+                    TweenService:Create(StatusIndicator, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(0, 255, 100)}):Play()
+                else
+                    TweenService:Create(StatusIndicator, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(60, 60, 60)}):Play()
+                end
+                pcall(callback, currentState)
+            end
+
+            ToggleButton.MouseButton1Click:Connect(function()
+                currentState = not currentState
+                updateToggle()
+            end)
+
+            if defaultState then
+                pcall(callback, true)
+            end
+
+            return ToggleButton
+        end
+
+        return TabElements
+    end
+
+    return WindowObj
+end
+
+return Library
