@@ -1260,97 +1260,24 @@ for _, rockInfo in ipairs(rockList) do
     end)
 end
 
--- ==================== LÓGICA DE AUTO BOSS ====================
-local function getBoss()
-    for _, model in ipairs(CollectionService:GetTagged("BossEventBoss")) do
-        if model:IsA("Model") and model:IsDescendantOf(workspace) then
-            local hitbox = model:FindFirstChild("BossDamageHitbox", true)
-            if hitbox and hitbox:IsA("BasePart") then
-                local stats = model:FindFirstChild("stats")
-                local health = stats and stats:FindFirstChild("Health")
-                if health and health.Value > 0 then
-                    return model, hitbox
-                end
-            end
-        end
-    end
-    local events = workspace:FindFirstChild("Events")
-    if events then
-        local bossFolder = events:FindFirstChild("BossEvent") or events:FindFirstChild("BossArena")
-        if bossFolder then
-            for _, model in ipairs(bossFolder:GetDescendants()) do
-                if model:IsA("Model") then
-                    local hitbox = model:FindFirstChild("BossDamageHitbox", true)
-                    if hitbox and hitbox:IsA("BasePart") then
-                        local stats = model:FindFirstChild("stats")
-                        local health = stats and stats:FindFirstChild("Health")
-                        if health and health.Value > 0 then
-                            return model, hitbox
-                        end
-                    end
-                end
-            end
-        end
-    end
-    return nil, nil
-end
+-- ==================== PESTAÑA AUTO BOSS ====================
+AutoBossTab:AddSection("Auto Bosses")
 
-local function claimBossChest()
+AutoBossTab:CreateToggle({
+    Name = "Auto Boss Farm",
+    Description = "AutoFarm de Bosses",
+    Default = false
+}, function(state)
+    getgenv().AutoBoss = state
     pcall(function()
-        local rEvents = ReplicatedStorage:FindFirstChild("rEvents")
-        if rEvents then
-            local checkChest = rEvents:FindFirstChild("checkChestRemote")
-            if checkChest then
-                local chests = { "Boss Chest", "Hallowed Chest", "Magma Chest", "Mythical Chest", "Golden Chest", "Enchanted Chest", "Legends Chest" }
-                for _, chest in ipairs(chests) do
-                    checkChest:InvokeServer(chest)
-                end
-            end
-        end
+        StarterGui:SetCore("SendNotification", {
+            Title = "SLK Paid Hub",
+            Text = state and "Auto Boss Activado ⚔️" or "Auto Boss Desactivado ❌",
+            Duration = 3
+        })
     end)
-end
-
-local lastBossPunch = 0
-local lastBossClaim = 0
-
-RunService.Heartbeat:Connect(function()
-    if not getgenv().AutoBoss then return end
-    
-    local Character = LP.Character
-    if not Character or not Character.Parent then return end
-    local HumanoidRootPart = Character:FindFirstChild("HumanoidRootPart")
-    local Humanoid = Character:FindFirstChildOfClass("Humanoid")
-    if not HumanoidRootPart or not Humanoid or Humanoid.Health <= 0 then return end
-    
-    local boss, hitbox = getBoss()
-    if boss and hitbox then
-        HumanoidRootPart.CFrame = CFrame.new(hitbox.Position + Vector3.new(0, BossHeight, 0))
-        
-        local punch = Character:FindFirstChild("Punch") or LP.Backpack:FindFirstChild("Punch")
-        if punch and punch.Parent == LP.Backpack then
-            Humanoid:EquipTool(punch)
-        end
-        
-        if os.clock() - lastBossPunch >= BossPunchDelay then
-            lastBossPunch = os.clock()
-            pcall(function()
-                local muscleEvent = LP:FindFirstChild("muscleEvent")
-                if muscleEvent then
-                    muscleEvent:FireServer("punch", "leftHand")
-                    muscleEvent:FireServer("punch", "rightHand")
-                end
-                if punch then
-                    punch:Activate()
-                end
-            end)
-        end
-    else
-        if os.clock() - lastBossClaim >= BossChestDelay then
-            lastBossClaim = os.clock()
-            claimBossChest()
-        end
-    end
 end)
+
 
 -- ==================== PESTAÑA STATS & CALCULATOR ====================
 StatsTab:AddSection("Monitoreo en Tiempo Real")
