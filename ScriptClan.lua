@@ -87,7 +87,7 @@ task.spawn(function()
 end)
 
 -- ==================== CARGAR LA INTERFAZ (LIBRERÍA) ====================
-local LibraryURL = "https://raw.githubusercontent.com/Chrismon014/ERDN/refs/heads/main/LibraryERDN"
+local LibraryURL = "https://raw.githubusercontent.com/AngelOficialBe/ChrisxLaleScript/refs/heads/main/Libreria"
 local Library = loadstring(game:HttpGet(LibraryURL))()
 
 local Window = Library:CreateWindow({
