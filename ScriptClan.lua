@@ -6,95 +6,318 @@ local TweenService = game:GetService("TweenService")
 local RunService = game:GetService("RunService")
 local CoreGui = game:GetService("CoreGui")
 local UserInputService = game:GetService("UserInputService")
+local Lighting = game:GetService("Lighting")
+local StarterGui = game:GetService("StarterGui")
+local TeleportService = game:GetService("TeleportService")
+local HttpService = game:GetService("HttpService")
+
 local LP = Players.LocalPlayer
 
--- Anti-AFK Automático
+-- Anti-AFK Automático con Notificación Nativa de Roblox
 LP.Idled:Connect(function()
 	VirtualUser:CaptureController()
 	VirtualUser:ClickButton2(Vector2.new())
 end)
 
+pcall(function()
+    StarterGui:SetCore("SendNotification", {
+        Title = "SLK Paid Hub",
+        Text = "Anti-AFK Activo 🛡️",
+        Duration = 4
+    })
+end)
+
 repeat task.wait(0.3) until LP:FindFirstChild("muscleEvent") and LP:FindFirstChild("leaderstats")
 
-local Strength = LP.leaderstats.Strength
-local Rebirths = LP.leaderstats.Rebirths
+local Strength = LP.leaderstats:WaitForChild("Strength")
+local Rebirths = LP.leaderstats:WaitForChild("Rebirths")
 
--- Variables de Estado
+-- Variables de Estado de Farming
 local FastFarm500 = false
 local FastFarm2k = false
+local FastFarm10k = false
+local FastFarm20k = false
+
+-- Variables de Estado de Rebirth
 local AutoRebirth = false
-local FastRebirth = false
+local RebirthsCombination = false
+local RebirthChaos = false
+local RebirthsTitans = false
 
--- Referencias para control dinámico de los Toggles en la UI
-local toggle500Ref, toggle2kRef
+-- Variables de Configuración y Autoreconectador
+local AutoRejoinActive = false
+local AutoExecuteActive = false
+local ConfigFileName = "ChrisxLale_Config.json"
 
--- ==================== LÓGICA DE FARMING 1: (500 Rep/s) ====================
-task.spawn(function()
-    local cachedEvent = LP:FindFirstChild("muscleEvent")
-    LP.ChildAdded:Connect(function(child)
-        if child.Name == "muscleEvent" then cachedEvent = child end
-    end)
+-- ==================== SISTEMA DE CONFIGURACIÓN Y AUTO-EXECUTE ====================
+local function SaveConfig()
+    if type(writefile) == "function" then
+        pcall(function()
+            local configData = {
+                AutoExecute = AutoExecuteActive,
+                AutoRejoin = AutoRejoinActive
+            }
+            writefile(ConfigFileName, HttpService:JSONEncode(configData))
+        end)
+    end
+end
 
-    local RATE = 500
-    local BURST = 50
-    local INTERVAL = BURST / RATE
-
-    while true do
-        if FastFarm500 then
-            if not cachedEvent or not cachedEvent.Parent then
-                cachedEvent = LP:FindFirstChild("muscleEvent")
-            end
-            if cachedEvent then
-                local start = os.clock()
-                for i = 1, BURST do
-                    if not FastFarm500 then break end
-                    pcall(function() cachedEvent:FireServer("rep") end)
+local function LoadConfig()
+    if type(readfile) == "function" and type(isfile) == "function" then
+        pcall(function()
+            if isfile(ConfigFileName) then
+                local savedData = HttpService:JSONDecode(readfile(ConfigFileName))
+                if type(savedData) == "table" then
+                    AutoExecuteActive = savedData.AutoExecute == true
+                    AutoRejoinActive = savedData.AutoRejoin == true
                 end
-                local remaining = INTERVAL - (os.clock() - start)
-                if remaining > 0 then task.wait(remaining) else task.wait() end
-            else
-                task.wait(0.05)
             end
-        else
-            task.wait(0.1)
-        end
+        end)
+    end
+end
+
+LoadConfig()
+
+-- Lógica de Auto Rejoin
+CoreGui.RobloxPromptGui.promptOverlay.ChildAdded:Connect(function(child)
+    if AutoRejoinActive and (child.Name == "ErrorPrompt" or child:FindFirstChild("ErrorTitle")) then
+        pcall(function()
+            StarterGui:SetCore("SendNotification", {
+                Title = "SLK Paid Hub",
+                Text = "Reconectando al servidor... 🔄",
+                Duration = 5
+            })
+        end)
+        task.wait(1)
+        TeleportService:Teleport(game.PlaceId, LP)
     end
 end)
 
--- ==================== LÓGICA DE FARMING 2: (2k Rep/s) ====================
-task.spawn(function()
-    local cachedEvent = LP:FindFirstChild("muscleEvent")
-    LP.ChildAdded:Connect(function(child)
-        if child.Name == "muscleEvent" then cachedEvent = child end
-    end)
+-- ==================== DICCIONARIO Y SISTEMA DE MASCOTAS ====================
+local PETS = {
+    ["Omega Overlord"] = { repSpeed = 20, strength = 0, durability = 0, rebirth = 0 },
+    ["Swift Samurai"] = { repSpeed = 15, strength = 0, durability = 0, rebirth = 0 },
+    ["Titanium Hydra"] = { repSpeed = 0, strength = 0, durability = 0, rebirth = 2 },
+    ["Tribal Overlord"] = { repSpeed = 0, strength = 0, durability = 0, rebirth = 2 },
+    ["Common Boss Pet"] = { repSpeed = 5, strength = 0, durability = 0, rebirth = 0 },
+    ["Rare Boss Pet"] = { repSpeed = 7, strength = 0, durability = 0, rebirth = 0 },
+    ["Epic Boss Pet"] = { repSpeed = 10, strength = 0, durability = 0, rebirth = 0 },
+    ["Rainbow Boss Pet"] = { repSpeed = 10, strength = 7, durability = 0, rebirth = 0 },
+    ["Legendary Boss Pet"] = { repSpeed = 10, strength = 10, durability = 0, rebirth = 0 },
+    ["Mythic Boss Pet"] = { repSpeed = 10, strength = 20, durability = 0, rebirth = 0 },
+    ["Inferno Drake"] = { repSpeed = 40, strength = 0, durability = 0, rebirth = 0 },
+}
 
-    local RATE = 2000
-    local BURST = 200
-    local INTERVAL = BURST / RATE
+local MAX_PET_SLOTS = 12
+local TARGET_REP_SPEED = 100
 
-    while true do
-        if FastFarm2k then
-            if not cachedEvent or not cachedEvent.Parent then
-                cachedEvent = LP:FindFirstChild("muscleEvent")
-            end
-            if cachedEvent then
-                local start = os.clock()
-                for i = 1, BURST do
-                    if not FastFarm2k then break end
-                    pcall(function() cachedEvent:FireServer("rep") end)
+local function applyPetLoadout(selected, isCurrent)
+    local rEvents = ReplicatedStorage:FindFirstChild("rEvents")
+    local remote = rEvents and rEvents:FindFirstChild("equipPetEvent")
+    if not remote then return false end
+
+    local petsFolder = LP:FindFirstChild("petsFolder")
+    if petsFolder then
+        for _, folder in ipairs(petsFolder:GetChildren()) do
+            if folder:IsA("Folder") then
+                for _, pet in ipairs(folder:GetChildren()) do
+                    if isCurrent and not isCurrent() then return false end
+                    remote:FireServer("unequipPet", pet)
                 end
-                local remaining = INTERVAL - (os.clock() - start)
-                if remaining > 0 then task.wait(remaining) else task.wait() end
-            else
-                task.wait(0.05)
             end
-        else
-            task.wait(0.1)
         end
     end
-end)
+    task.wait(0.05)
+    for _, pet in ipairs(selected) do
+        if isCurrent and not isCurrent() then return false end
+        remote:FireServer("equipPet", pet)
+    end
+    return not isCurrent or isCurrent()
+end
 
--- ==================== AUTO REBIRTH ====================
+local function getOwnedConfiguredPets()
+    local ownedPets = {}
+    local petsFolder = LP:FindFirstChild("petsFolder")
+    if not petsFolder then return ownedPets end
+
+    for _, folder in ipairs(petsFolder:GetChildren()) do
+        if folder:IsA("Folder") then
+            for _, pet in ipairs(folder:GetChildren()) do
+                local config = PETS[pet.Name]
+                if config then
+                    table.insert(ownedPets, {
+                        instance = pet,
+                        name = pet.Name,
+                        repSpeed = config.repSpeed or 0,
+                        strength = config.strength or 0,
+                        durability = config.durability or 0,
+                        rebirth = config.rebirth or 0,
+                    })
+                end
+            end
+        end
+    end
+    return ownedPets
+end
+
+local function equipBestFarmingPets(isCurrent)
+    if isCurrent and not isCurrent() then return end
+    local pets = getOwnedConfiguredPets()
+    local selected = {}
+    local equipped = {}
+    local equippedCount = 0
+    local currentRepSpeed = 0
+
+    table.sort(pets, function(a, b) return a.repSpeed > b.repSpeed end)
+
+    for _, pet in ipairs(pets) do
+        if equippedCount >= MAX_PET_SLOTS or currentRepSpeed >= TARGET_REP_SPEED then break end
+        if pet.repSpeed > 0 then
+            table.insert(selected, pet.instance)
+            equipped[pet.instance] = true
+            equippedCount = equippedCount + 1
+            currentRepSpeed = currentRepSpeed + pet.repSpeed
+        end
+    end
+
+    local remainingPets = {}
+    for _, pet in ipairs(pets) do
+        if not equipped[pet.instance] then
+            table.insert(remainingPets, pet)
+        end
+    end
+
+    table.sort(remainingPets, function(a, b)
+        return (a.strength + a.durability) > (b.strength + b.durability)
+    end)
+
+    for _, pet in ipairs(remainingPets) do
+        if equippedCount >= MAX_PET_SLOTS then break end
+        if pet.strength > 0 or pet.durability > 0 then
+            table.insert(selected, pet.instance)
+            equipped[pet.instance] = true
+            equippedCount = equippedCount + 1
+        end
+    end
+
+    applyPetLoadout(selected, isCurrent)
+end
+
+local function equipSpecificPets(targetRepName, targetRebirthName, isCurrent)
+    if isCurrent and not isCurrent() then return end
+    local pets = getOwnedConfiguredPets()
+    local selected = {}
+    local equippedCount = 0
+
+    for _, pet in ipairs(pets) do
+        if equippedCount >= MAX_PET_SLOTS then break end
+        if pet.name == targetRepName then
+            table.insert(selected, pet.instance)
+            equippedCount = equippedCount + 1
+        end
+    end
+
+    if equippedCount == 0 then
+        for _, pet in ipairs(pets) do
+            if equippedCount >= MAX_PET_SLOTS then break end
+            table.insert(selected, pet.instance)
+            equippedCount = equippedCount + 1
+        end
+    end
+
+    applyPetLoadout(selected, isCurrent)
+end
+
+local function equipSpecificRebirthPets(targetRebirthName, isCurrent)
+    if isCurrent and not isCurrent() then return end
+    local pets = getOwnedConfiguredPets()
+    local selected = {}
+    local equippedCount = 0
+
+    for _, pet in ipairs(pets) do
+        if equippedCount >= MAX_PET_SLOTS then break end
+        if pet.name == targetRebirthName or pet.rebirth > 0 then
+            table.insert(selected, pet.instance)
+            equippedCount = equippedCount + 1
+        end
+    end
+
+    applyPetLoadout(selected, isCurrent)
+end
+
+local function equipBestRebirthPets(isCurrent)
+    if isCurrent and not isCurrent() then return end
+    local pets = getOwnedConfiguredPets()
+    local selected = {}
+
+    table.sort(pets, function(a, b) return a.rebirth > b.rebirth end)
+
+    local equippedCount = 0
+    for _, pet in ipairs(pets) do
+        if equippedCount >= MAX_PET_SLOTS then break end
+        if pet.rebirth > 0 then
+            table.insert(selected, pet.instance)
+            equippedCount = equippedCount + 1
+        end
+    end
+
+    applyPetLoadout(selected, isCurrent)
+end
+
+local function sendTrainingReps(state, rate, maxBurst, canSend)
+    local now = os.clock()
+    local elapsed = math.clamp(now - (state.LastAt or now), 0, 0.1)
+    state.LastAt = now
+    state.Tokens = math.min(maxBurst, (state.Tokens or 0) + rate * elapsed)
+    local sent = 0
+    local muscleEvent = LP:FindFirstChild("muscleEvent")
+    while state.Tokens >= 1 and canSend() and muscleEvent do
+        muscleEvent:FireServer("rep")
+        state.Tokens = state.Tokens - 1
+        sent = sent + 1
+    end
+    return sent
+end
+
+-- ==================== MOTOR DE FARMING OP ====================
+local function createFarmLoop(getState, rate, burst)
+    task.spawn(function()
+        local cachedEvent = LP:FindFirstChild("muscleEvent")
+        LP.ChildAdded:Connect(function(child)
+            if child.Name == "muscleEvent" then cachedEvent = child end
+        end)
+
+        local INTERVAL = burst / rate
+
+        while true do
+            if getState() then
+                if not cachedEvent or not cachedEvent.Parent then
+                    cachedEvent = LP:FindFirstChild("muscleEvent")
+                end
+                if cachedEvent then
+                    local start = os.clock()
+                    for i = 1, burst do
+                        if not getState() then break end
+                        pcall(function() cachedEvent:FireServer("rep") end)
+                    end
+                    local remaining = INTERVAL - (os.clock() - start)
+                    if remaining > 0 then task.wait(remaining) else task.wait() end
+                else
+                    task.wait(0.05)
+                end
+            else
+                task.wait(0.1)
+            end
+        end
+    end)
+end
+
+createFarmLoop(function() return FastFarm500 end, 500, 50)
+createFarmLoop(function() return FastFarm2k end, 2000, 200)
+createFarmLoop(function() return FastFarm10k end, 10000, 500)
+createFarmLoop(function() return FastFarm20k end, 20000, 1000)
+
+-- ==================== AUTO REBIRTH NORMAL ====================
 task.spawn(function()
 	local lastRequest = 0
 	local minCooldown = 0.1
@@ -127,6 +350,140 @@ task.spawn(function()
 		tryRebirth()
 	end
 end)
+
+-- ==================== MOTOR GENERALIZADO DE FAST REBIRTH ====================
+local function runFastRebirthWorker(getStateRef, getGenRef, setGenRef, equipRepFunc, equipRebFunc)
+    local adaptiveData = { TargetSeconds = 3, MaxRate = 50, SendRate = 50, StrengthPerRep = nil }
+
+    local function isCurrent(gen)
+        return getStateRef() and getGenRef() == gen
+    end
+
+    local function updateAdaptiveSpeed(cycle)
+        local now = os.clock()
+        if now - cycle.SampleAt < 0.25 then return end
+        local gain = Strength.Value - cycle.StartStrength
+        if gain > 0 and cycle.Sent > 0 then
+            adaptiveData.StrengthPerRep = gain / cycle.Sent
+            local remaining = math.max(0, cycle.Target - Strength.Value)
+            local seconds = math.max(0.1, adaptiveData.TargetSeconds - cycle.TrainingSeconds)
+            adaptiveData.SendRate = math.clamp(remaining / adaptiveData.StrengthPerRep / seconds, 1, adaptiveData.MaxRate)
+        elseif cycle.TrainingSeconds >= adaptiveData.TargetSeconds then
+            adaptiveData.SendRate = adaptiveData.MaxRate
+        end
+        cycle.SampleAt = now
+    end
+
+    local function performCycle(gen)
+        local cycle = {
+            Target = 5000 + Rebirths.Value * 2550,
+            Rebirths = Rebirths.Value,
+            SampleAt = os.clock(),
+            StartStrength = Strength.Value,
+            Sent = 0,
+            Tokens = 0,
+            LastAt = os.clock(),
+            TrainingSeconds = 0
+        }
+        adaptiveData.SendRate = adaptiveData.StrengthPerRep and math.clamp(math.max(0, cycle.Target - cycle.StartStrength) / adaptiveData.StrengthPerRep / adaptiveData.TargetSeconds, 1, adaptiveData.MaxRate) or adaptiveData.MaxRate
+
+        local lastTrainingAt = os.clock()
+        local function needsTraining()
+            return isCurrent(gen) and Rebirths.Value == cycle.Rebirths and Strength.Value < cycle.Target
+        end
+
+        while needsTraining() do
+            local now = os.clock()
+            local character = LP.Character
+            local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+            if humanoid and humanoid.Health > 0 then
+                cycle.TrainingSeconds = cycle.TrainingSeconds + math.max(0, now - lastTrainingAt)
+                updateAdaptiveSpeed(cycle)
+                cycle.Sent = cycle.Sent + sendTrainingReps(cycle, adaptiveData.SendRate, 5, needsTraining)
+            else
+                cycle.Tokens = 0
+                cycle.LastAt = now
+            end
+            lastTrainingAt = now
+            RunService.Heartbeat:Wait()
+        end
+
+        if not isCurrent(gen) or Rebirths.Value ~= cycle.Rebirths then return end
+
+        equipRebFunc(function() return isCurrent(gen) end)
+
+        local rEvents = ReplicatedStorage:FindFirstChild("rEvents")
+        local remote = rEvents and rEvents:FindFirstChild("rebirthRemote")
+
+        while isCurrent(gen) and Rebirths.Value == cycle.Rebirths do
+            if remote then
+                pcall(function()
+                    if remote:IsA("RemoteFunction") then
+                        remote:InvokeServer("rebirthRequest")
+                    elseif remote:IsA("RemoteEvent") then
+                        remote:FireServer("rebirthRequest")
+                    end
+                end)
+            end
+            task.wait(0.05)
+        end
+    end
+
+    setGenRef(getGenRef() + 1)
+    local currentGen = getGenRef()
+
+    task.spawn(function()
+        pcall(function()
+            while isCurrent(currentGen) do
+                equipRepFunc(function() return isCurrent(currentGen) end)
+                if not isCurrent(currentGen) then break end
+                
+                performCycle(currentGen)
+                task.wait()
+            end
+        end)
+    end)
+end
+
+local combGen, combActive = 0, false
+local chaosGen, chaosActive = 0, false
+local titansGen, titansActive = 0, false
+
+local function triggerCombination()
+    if RebirthsCombination then
+        runFastRebirthWorker(
+            function() return RebirthsCombination end,
+            function() return combGen end,
+            function(v) combGen = v end,
+            function(cb) equipBestFarmingPets(cb) end,
+            function(cb) equipBestRebirthPets(cb) end
+        )
+    end
+end
+
+local function triggerChaos()
+    if RebirthChaos then
+        runFastRebirthWorker(
+            function() return RebirthChaos end,
+            function() return chaosGen end,
+            function(v) chaosGen = v end,
+            function(cb) equipSpecificPets("Swift Samurai", "Tribal Overlord", cb) end,
+            function(cb) equipSpecificRebirthPets("Tribal Overlord", cb) end
+        )
+    end
+end
+
+local function triggerTitans()
+    if RebirthsTitans then
+        runFastRebirthWorker(
+            function() return RebirthsTitans end,
+            function() return titansGen end,
+            function(v) titansGen = v end,
+            function(cb) equipSpecificPets("Omega Overlord", "Titanium Hydra", cb) end,
+            function(cb) equipSpecificRebirthPets("Titanium Hydra", cb) end
+        )
+    end
+end
 
 -- ==================== LIBRERÍA DE INTERFAZ GRÁFICA ====================
 local Library = {}
@@ -165,7 +522,7 @@ local function MakeDraggable(dragBar, object)
 end
 
 function Library:CreateWindow(config)
-    WindowObj = {}
+    local WindowObj = {}
     local windowTitle = config.Title or "👑 ChrisxLale Script"
     
     local parentUI = (gethui and gethui()) or CoreGui or LP:WaitForChild("PlayerGui")
@@ -341,6 +698,7 @@ function Library:CreateWindow(config)
         ["Principal"] = "🏠",
         ["Farming"] = "🏋️",
         ["Rebirth"] = "🌌",
+        ["Settings"] = "⚙️",
         ["Jefes"] = "👹",
         ["Teletransporte"] = "🌀"
     }
@@ -577,33 +935,68 @@ local Window = Library:CreateWindow({
 local PrincipalTab = Window:CreateTab("Principal", "🏠", "Bienvenido al script, " .. LP.Name)
 local FarmingTab = Window:CreateTab("Farming", "🏋️", "Automatización de recursos")
 local RebirthTab = Window:CreateTab("Rebirth", "🌌", "Sistema de reencarnaciones")
-local JefesTab = Window:CreateTab("Jefes", "👹", "Farming de jefes")
-local TeletransporteTab = Window:CreateTab("Teletransporte", "🌀", "Viaja por el mapa")
+local SettingsTab = Window:CreateTab("Settings", "⚙️", "Configuración y automatización")
 
--- ==================== AÑADIR ELEMENTOS A LAS PESTAÑAS ====================
-PrincipalTab:AddSection("Información")
+-- ==================== PESTAÑA PRINCIPAL ====================
+PrincipalTab:AddSection("Utilidades")
 PrincipalTab:CreateToggle({
-    Name = "Estado Anti-AFK",
-    Description = "Activo por defecto (Protección contra inactividad)",
+    Name = "Anti-AFK",
+    Description = "Protección automática contra inactividad",
     Default = true
 }, function(state)
-    print("Anti-AFK state:", state)
+    if state then
+        pcall(function()
+            StarterGui:SetCore("SendNotification", {
+                Title = "SLK Paid Hub",
+                Text = "Anti-AFK Activo 🛡️",
+                Duration = 3
+            })
+        end)
+    end
 end)
 
-FarmingTab:AddSection("Farming OP")
+PrincipalTab:CreateToggle({
+    Name = "Anti Lag Ligero",
+    Description = "Baja gráficos y sombras sin alterar los colores del mapa",
+    Default = false
+}, function(state)
+    pcall(function()
+        if state then
+            settings().Rendering.QualityLevel = Enum.QualityLevel.Level01
+            Lighting.GlobalShadows = false
+            Lighting.Technology = Enum.LightingTechnology.Compatibility
+            StarterGui:SetCore("SendNotification", {
+                Title = "SLK Paid Hub",
+                Text = "Anti Lag Activado ⚡",
+                Duration = 3
+            })
+        else
+            settings().Rendering.QualityLevel = Enum.QualityLevel.Automatic
+            Lighting.GlobalShadows = true
+            Lighting.Technology = Enum.LightingTechnology.Future
+        end
+    end)
+end)
 
-toggle500Ref = FarmingTab:CreateToggle({
+-- ==================== PESTAÑA FARMING ====================
+FarmingTab:AddSection("Activar para Rebirths+Fuerza")
+
+FarmingTab:CreateToggle({
     Name = "OP Farm (500 Rep/s)",
-    Description = "Velocidad estándar: 500 repeticiones por segundo",
+    Description = "Velocidad recomendada para combinar con Fast Rebirth",
     Default = false
 }, function(state)
     FastFarm500 = state
     if state then 
         FastFarm2k = false 
+        FastFarm10k = false 
+        FastFarm20k = false 
     end
 end)
 
-toggle2kRef = FarmingTab:CreateToggle({
+FarmingTab:AddSection("Solo fuerza")
+
+FarmingTab:CreateToggle({
     Name = "OP Farm (2k Rep/s)",
     Description = "Velocidad rápida: 2,000 repeticiones por segundo",
     Default = false
@@ -611,29 +1004,142 @@ toggle2kRef = FarmingTab:CreateToggle({
     FastFarm2k = state
     if state then 
         FastFarm500 = false 
+        FastFarm10k = false 
+        FastFarm20k = false 
     end
 end)
 
+FarmingTab:CreateToggle({
+    Name = "OP Farm (10k Rep/s)",
+    Description = "Velocidad alta: 10,000 repeticiones por segundo",
+    Default = false
+}, function(state)
+    FastFarm10k = state
+    if state then 
+        FastFarm500 = false 
+        FastFarm2k = false 
+        FastFarm20k = false 
+    end
+end)
+
+FarmingTab:CreateToggle({
+    Name = "OP Farm (20k Rep/s)",
+    Description = "Velocidad máxima: 20,000 repeticiones por segundo",
+    Default = false
+}, function(state)
+    FastFarm20k = state
+    if state then 
+        FastFarm500 = false 
+        FastFarm2k = false 
+        FastFarm10k = false 
+    end
+end)
+
+-- ==================== PESTAÑA REBIRTH ====================
 RebirthTab:AddSection("Rebirth")
 
 RebirthTab:CreateToggle({
     Name = "Auto Rebirth",
-    Description = "Rebirth cuando alcanzas la fuerza requerida",
+    Description = "Rebirth automático básico por fuerza",
     Default = false
 }, function(state)
     AutoRebirth = state
+    if state then
+        RebirthsCombination = false
+        RebirthChaos = false
+        RebirthsTitans = false
+    end
 end)
 
 RebirthTab:AddSection("Fast Rebirth")
 
 RebirthTab:CreateToggle({
-    Name = "Fast Rebirth",
-    Description = "Speed -> Farm -> Packs -> Rebirth",
+    Name = "Auto Rebirths combination",
+    Description = "",
     Default = false
 }, function(state)
-    FastRebirth = state
-    if state then 
-        FastFarm2k = true 
-        FastFarm500 = false
+    RebirthsCombination = state
+    if state then
+        AutoRebirth = false
+        RebirthChaos = false
+        RebirthsTitans = false
+        FastFarm2k = false
+        FastFarm10k = false
+        FastFarm20k = false
+        FastFarm500 = true
+        triggerCombination()
     end
+end)
+
+RebirthTab:CreateToggle({
+    Name = "Rebirth chaos",
+    Description = "Equipa Swift Samurai para repeticiones y Tribal Overlord para renacer",
+    Default = false
+}, function(state)
+    RebirthChaos = state
+    if state then
+        AutoRebirth = false
+        RebirthsCombination = false
+        RebirthsTitans = false
+        FastFarm2k = false
+        FastFarm10k = false
+        FastFarm20k = false
+        FastFarm500 = true
+        triggerChaos()
+    end
+end)
+
+RebirthTab:CreateToggle({
+    Name = "Rebirths titans",
+    Description = "Equipa Omega Overlord para repeticiones y Titanium Hydra para renacer",
+    Default = false
+}, function(state)
+    RebirthsTitans = state
+    if state then
+        AutoRebirth = false
+        RebirthsCombination = false
+        RebirthChaos = false
+        FastFarm2k = false
+        FastFarm10k = false
+        FastFarm20k = false
+        FastFarm500 = true
+        triggerTitans()
+    end
+end)
+
+-- ==================== PESTAÑA SETTINGS / CONFIG ====================
+SettingsTab:AddSection("Auto Execute")
+
+SettingsTab:CreateToggle({
+    Name = "Auto Execute",
+    Description = "Guarda el estado del script para autoejecutarse al ingresar",
+    Default = AutoExecuteActive
+}, function(state)
+    AutoExecuteActive = state
+    SaveConfig()
+    pcall(function()
+        StarterGui:SetCore("SendNotification", {
+            Title = "SLK Paid Hub",
+            Text = state and "Auto Execute Activado ⚙️" or "Auto Execute Desactivado ❌",
+            Duration = 3
+        })
+    end)
+end)
+
+SettingsTab:AddSection("Auto Rejoin")
+
+SettingsTab:CreateToggle({
+    Name = "Auto Rejoin",
+    Description = "Reconecta automáticamente al servidor si sufres una desconexión",
+    Default = AutoRejoinActive
+}, function(state)
+    AutoRejoinActive = state
+    SaveConfig()
+    pcall(function()
+        StarterGui:SetCore("SendNotification", {
+            Title = "SLK Paid Hub",
+            Text = state and "Auto Rejoin Activado 🔄" or "Auto Rejoin Desactivado ❌",
+            Duration = 3
+        })
+    end)
 end)
