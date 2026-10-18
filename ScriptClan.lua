@@ -15,30 +15,68 @@ repeat task.wait(0.3) until LP:FindFirstChild("muscleEvent") and LP:FindFirstChi
 local Strength = LP.leaderstats.Strength
 local Rebirths = LP.leaderstats.Rebirths
 
-local FastFarm = false
+-- Variables de Estado
+local FastFarm500 = false
+local FastFarm2k = false
 local AutoRebirth = false
 local FastRebirth = false
 
--- ==================== LÓGICA DE FARMING (OP FARM) ====================
+-- Referencias para control dinámico de los Toggles en la UI
+local toggle500Ref, toggle2kRef
+
+-- ==================== LÓGICA DE FARMING 1: (500 Rep/s) ====================
 task.spawn(function()
     local cachedEvent = LP:FindFirstChild("muscleEvent")
     LP.ChildAdded:Connect(function(child)
         if child.Name == "muscleEvent" then cachedEvent = child end
     end)
 
-    local RATE = 10000
-    local BURST = 1000
+    local RATE = 500
+    local BURST = 50
     local INTERVAL = BURST / RATE
 
     while true do
-        if FastFarm then
+        if FastFarm500 then
             if not cachedEvent or not cachedEvent.Parent then
                 cachedEvent = LP:FindFirstChild("muscleEvent")
             end
             if cachedEvent then
                 local start = os.clock()
                 for i = 1, BURST do
-                    if not FastFarm then break end
+                    if not FastFarm500 then break end
+                    pcall(function() cachedEvent:FireServer("rep") end)
+                end
+                local remaining = INTERVAL - (os.clock() - start)
+                if remaining > 0 then task.wait(remaining) else task.wait() end
+            else
+                task.wait(0.05)
+            end
+        else
+            task.wait(0.1)
+        end
+    end
+end)
+
+-- ==================== LÓGICA DE FARMING 2: (2k Rep/s) ====================
+task.spawn(function()
+    local cachedEvent = LP:FindFirstChild("muscleEvent")
+    LP.ChildAdded:Connect(function(child)
+        if child.Name == "muscleEvent" then cachedEvent = child end
+    end)
+
+    local RATE = 2000
+    local BURST = 200
+    local INTERVAL = BURST / RATE
+
+    while true do
+        if FastFarm2k then
+            if not cachedEvent or not cachedEvent.Parent then
+                cachedEvent = LP:FindFirstChild("muscleEvent")
+            end
+            if cachedEvent then
+                local start = os.clock()
+                for i = 1, BURST do
+                    if not FastFarm2k then break end
                     pcall(function() cachedEvent:FireServer("rep") end)
                 end
                 local remaining = INTERVAL - (os.clock() - start)
@@ -101,31 +139,51 @@ local BossTab = Window:CreateTab("Boss", "B")
 local InfoTab = Window:CreateTab("Info", "I")
 local SettingsTab = Window:CreateTab("Settings", "S")
 
--- Añadir Elementos a la Pestaña Farming
+-- ==================== AÑADIR ELEMENTOS A FARMING ====================
 FarmingTab:AddSection("Farming OP")
-FarmingTab:CreateToggle({
-    Name = "OP Farm",
-    Description = "Target: OP FARM (Fast Strength)",
+
+toggle500Ref = FarmingTab:CreateToggle({
+    Name = "OP Farm (500 Rep/s)",
+    Description = "Velocidad estándar: 500 repeticiones por segundo",
     Default = false
 }, function(state)
-    FastFarm = state
+    FastFarm500 = state
+    if state then 
+        FastFarm2k = false 
+    end
+end)
+
+toggle2kRef = FarmingTab:CreateToggle({
+    Name = "OP Farm (2k Rep/s)",
+    Description = "Velocidad rápida: 2,000 repeticiones por segundo",
+    Default = false
+}, function(state)
+    FastFarm2k = state
+    if state then 
+        FastFarm500 = false 
+    end
 end)
 
 FarmingTab:AddSection("Rebirth")
+
 FarmingTab:CreateToggle({
     Name = "Auto Rebirth",
-    Description = "Rebirth when strength reaches threshold",
+    Description = "Rebirth cuando alcanzas la fuerza requerida",
     Default = false
 }, function(state)
     AutoRebirth = state
 end)
 
 FarmingTab:AddSection("Fast Rebirth")
+
 FarmingTab:CreateToggle({
     Name = "Fast Rebirth",
     Description = "Speed -> Farm -> Packs -> Rebirth",
     Default = false
 }, function(state)
     FastRebirth = state
-    if state then FastFarm = true end
+    if state then 
+        FastFarm2k = true 
+        FastFarm500 = false
+    end
 end)
