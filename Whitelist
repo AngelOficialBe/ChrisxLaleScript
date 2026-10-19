@@ -1,6 +1,6 @@
 -- ==================== CONFIGURACIÓN DE SEGURIDAD ====================
 local ValidKey = "SLKONTOP" -- Key escrita en texto
-local MainScriptURL = "https://raw.githubusercontent.com/AngelOficialBe/ChrisxLaleScript/refs/heads/main/ScriptClan.lua" 
+local MainScriptURL = "https://raw.githubusercontent.com/AngelOficialBe/ChrisxLaleScript/refs/heads/main/ScriptClan" 
 local WhitelistURL = "https://raw.githubusercontent.com/AngelOficialBe/ChrisxLaleScript/refs/heads/main/Key"
 
 local Players = game:GetService("Players")
@@ -14,7 +14,7 @@ local function checkWhitelistAndEnforce()
     end)
 
     if not success or not response then
-        LP:Kick("\n[ERDN Security]\nError al verificar la Whitelist.\nNo se pudo conectar con el servidor.")
+        LP:Kick("\n[SLK Security]\nError al verificar la Whitelist.\nNo se pudo conectar con el servidor.")
         return false
     end
 
