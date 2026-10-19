@@ -1557,7 +1557,7 @@ TeleportTab:AddButton("Industrial Gym", function()
 end)
 
 TeleportTab:AddButton("Halloween Gym", function()
-    tpTo(CFrame.new(960, 17, -7398), "Halloween Gym")
+    tpTo(CFrame.new(5558, 86, 5838), "Halloween Gym")
 end)
 
 -- ==================== PESTAÑA SETTINGS / CONFIG ====================
