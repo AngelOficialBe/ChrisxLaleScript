@@ -1536,7 +1536,7 @@ TeleportTab:AddButton("Mythical Island", function()
     tpTo(CFrame.new(2255, 7, 1071), "Mythical Island")
 end)
 
-TeleportTab:AddButton("***** Island", function()
+TeleportTab:AddButton("Eternal Island", function()
     tpTo(CFrame.new(-6768, 7, -1287), "***** Island")
 end)
 
