@@ -1208,7 +1208,7 @@ local rockList = {
     { Name = "Farm Legend Gym Rock", MinDur = 1000000, DurVal = 1000000 },
     { Name = "Farm Muscle King Gym Rock", MinDur = 5000000, DurVal = 5000000 },
     { Name = "Farm Ancient Jungle Rock", MinDur = 10000000, DurVal = 10000000 },
-	{ Name = "Farm Industrial Gym Rock", MinDur = 25000000, DurVal = 25000000 },
+	{ Name = "Farm Industrial Jungle Rock", MinDur = 25000000, DurVal = 25000000 },
 	{ Name = "Farm Halloween Gym Rock", MinDur = 0, DurVal = 0 },
 }
 
