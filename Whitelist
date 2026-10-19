@@ -1,5 +1,5 @@
 -- ==================== CONFIGURACIÓN DE SEGURIDAD ====================
-local ValidKey = "SLKONTOP" -- Key escrita en texto
+local ValidKey = "SLK" -- Key escrita en texto
 local MainScriptURL = "https://raw.githubusercontent.com/AngelOficialBe/ChrisxLaleScript/refs/heads/main/ScriptClan" 
 local WhitelistURL = "https://raw.githubusercontent.com/AngelOficialBe/ChrisxLaleScript/refs/heads/main/Key"
 
