@@ -714,7 +714,6 @@ function Library:CreateWindow(config)
         ["Farming"] = "🏋️",
         ["Rebirth"] = "🌌",
         ["Auto Rocks"] = "🪨",
-		["Auto Boss"] = "👹",
         ["Stats"] = "📊",
         ["Gift"] = "🎁",
         ["Teleport"] = "🌀",
@@ -991,8 +990,6 @@ function Library:CreateWindow(config)
     return WindowObj
 end
 
-
-
 -- ==================== INICIALIZACIÓN DE LA UI ====================
 local Window = Library:CreateWindow({
     Title = "👑 ChrisxLale Script",
@@ -1003,8 +1000,7 @@ local Window = Library:CreateWindow({
 local PrincipalTab = Window:CreateTab("Principal", "🏠", "Bienvenido al script, " .. LP.Name)
 local FarmingTab = Window:CreateTab("Farming", "🏋️", "Automatización de recursos")
 local RebirthTab = Window:CreateTab("Rebirth", "🌌", "Sistema de reencarnaciones")
-local RocksTab = Window:CreateTab("Auto Rocks", "⛰️", "Farming automático de rocas")
-local AutoBossTab = Window:CreateTab("Auto Boss", "👹", "Combate automático")
+local RocksTab = Window:CreateTab("Auto Rocks", "🪨", "Farming automático de rocas")
 local StatsTab = Window:CreateTab("Stats", "📊", "Calculadoras y monitoreo en tiempo real")
 local GiftTab = Window:CreateTab("Gift", "🎁", "Regalar consumibles a otros jugadores")
 local TeleportTab = Window:CreateTab("Teleport", "🌀", "Viaja por el mapa")
@@ -1260,25 +1256,6 @@ for _, rockInfo in ipairs(rockList) do
     end)
 end
 
--- ==================== PESTAÑA AUTO BOSS ====================
-AutoBossTab:AddSection("Auto Bosses")
-
-AutoBossTab:CreateToggle({
-    Name = "Auto Boss Farm",
-    Description = "AutoFarm de Bosses",
-    Default = false
-}, function(state)
-    getgenv().AutoBoss = state
-    pcall(function()
-        StarterGui:SetCore("SendNotification", {
-            Title = "SLK Paid Hub",
-            Text = state and "Auto Boss Activado ⚔️" or "Auto Boss Desactivado ❌",
-            Duration = 3
-        })
-    end)
-end)
-
-
 -- ==================== PESTAÑA STATS & CALCULATOR ====================
 StatsTab:AddSection("Monitoreo en Tiempo Real")
 
@@ -1365,103 +1342,17 @@ task.spawn(function()
     end
 end)
 
--- ==================== PESTAÑA GIFT ADAPTADA ====================
-GiftTab:AddLabel("Gifting Protein egg:").TextSize = 22
-local proteinEggLabel = GiftTab:AddLabel("Protein Eggs: 0")
-proteinEggLabel.TextSize = 20
+-- ==================== PESTAÑA GIFT ====================
+GiftTab:AddSection("Monitoreo de Consumibles")
 
-local selectedEggPlayer = nil
-local eggCount = 0
-local eggDropdown = GiftTab:AddDropdown("Player to Gift Eggs", function(selectedDisplayName)
-    for _, plr in ipairs(Players:GetPlayers()) do
-        if plr.DisplayName == selectedDisplayName then
-            selectedEggPlayer = plr
-            break
-        end
-    end
-end)
+local proteinEggBtn = GiftTab:AddButton("Protein Eggs: 0", function() end)
+local tropicalShakeBtn = GiftTab:AddButton("Tropical Shakes: 0", function() end)
 
-GiftTab:AddButton("🔄 Actualizar Lista (Eggs)", function()
-    eggDropdown:Clear()
-    for _, plr in ipairs(Players:GetPlayers()) do
-        if plr ~= LP then eggDropdown:Add(plr.DisplayName) end
-    end
-    StarterGui:SetCore("SendNotification", { Title = "SLK Paid Hub", Text = "Lista actualizada 🔄", Duration = 2 })
-end)
-
-for _, plr in ipairs(Players:GetPlayers()) do
-    if plr ~= LP then eggDropdown:Add(plr.DisplayName) end
-end
-Players.PlayerAdded:Connect(function(plr)
-    if plr ~= LP then eggDropdown:Add(plr.DisplayName) end
-end)
-
-GiftTab:AddTextBox("Amount of Eggs", function(text)
-    eggCount = tonumber(text) or 0
-end)
-
-GiftTab:AddButton("Gift Eggs", function()
-    if selectedEggPlayer and eggCount > 0 then
-        for i = 1, eggCount do
-            local egg = LP.consumablesFolder:FindFirstChild("Protein Egg")
-            if egg then
-                ReplicatedStorage.rEvents.giftRemote:InvokeServer("giftRequest", selectedEggPlayer, egg)
-                task.wait(0.1)
-            end
-        end
-    end
-end)
-
-GiftTab:AddLabel("Gifting Tropical Shakes:").TextSize = 22
-local tropicalShakeLabel = GiftTab:AddLabel("Tropical Shakes: 0")
-tropicalShakeLabel.TextSize = 18
-
-local selectedShakePlayer = nil
-local shakeCount = 0
-local shakeDropdown = GiftTab:AddDropdown("Player to Gift Tropical Shakes", function(selectedDisplayName)
-    for _, plr in ipairs(Players:GetPlayers()) do
-        if plr.DisplayName == selectedDisplayName then
-            selectedShakePlayer = plr
-            break
-        end
-    end
-end)
-
-GiftTab:AddButton("🔄 Actualizar Lista (Shakes)", function()
-    shakeDropdown:Clear()
-    for _, plr in ipairs(Players:GetPlayers()) do
-        if plr ~= LP then shakeDropdown:Add(plr.DisplayName) end
-    end
-    StarterGui:SetCore("SendNotification", { Title = "SLK Paid Hub", Text = "Lista actualizada 🔄", Duration = 2 })
-end)
-
-for _, plr in ipairs(Players:GetPlayers()) do
-    if plr ~= LP then shakeDropdown:Add(plr.DisplayName) end
-end
-Players.PlayerAdded:Connect(function(plr)
-    if plr ~= LP then shakeDropdown:Add(plr.DisplayName) end
-end)
-
-GiftTab:AddTextBox("Tropical Shakes gift", function(text)
-    shakeCount = tonumber(text) or 0
-end)
-
-GiftTab:AddButton("Gift Tropical Shakes", function()
-    if selectedShakePlayer and shakeCount > 0 then
-        for i = 1, shakeCount do
-            local shake = LP.consumablesFolder:FindFirstChild("Tropical Shake")
-            if shake then
-                ReplicatedStorage.rEvents.giftRemote:InvokeServer("giftRequest", selectedShakePlayer, shake)
-                task.wait(0.1)
-            end
-        end
-    end
-end)
-
-local function updateItemCount()
+local function updateItemCounts()
     local proteinEggCount = 0
     local tropicalShakeCount = 0
-    local backpack = LP:WaitForChild("Backpack")
+    
+    local backpack = LP:FindFirstChild("Backpack")
     if backpack then
         for _, item in ipairs(backpack:GetChildren()) do
             if item.Name == "Protein Egg" then
@@ -1471,16 +1362,163 @@ local function updateItemCount()
             end
         end
     end
-    proteinEggLabel.Text = "Protein Eggs: " .. proteinEggCount
-    tropicalShakeLabel.Text = "Tropical Shakes: " .. tropicalShakeCount
+    
+    local consumablesFolder = LP:FindFirstChild("consumablesFolder")
+    if consumablesFolder then
+        for _, item in ipairs(consumablesFolder:GetChildren()) do
+            if item.Name == "Protein Egg" then
+                proteinEggCount = proteinEggCount + 1
+            elseif item.Name == "Tropical Shake" then
+                tropicalShakeCount = tropicalShakeCount + 1
+            end
+        end
+    end
+
+    proteinEggBtn.Text = "Protein Eggs: " .. proteinEggCount
+    tropicalShakeBtn.Text = "Tropical Shakes: " .. tropicalShakeCount
 end
 
 task.spawn(function()
     while true do
-        updateItemCount()
-        task.wait(0.25)
+        updateItemCounts()
+        task.wait(1)
     end
 end)
+
+GiftTab:AddSection("Actualizar Lista")
+
+GiftTab:AddButton("🔄 Refresh Players / Items", function()
+    updateItemCounts()
+    pcall(function()
+        StarterGui:SetCore("SendNotification", {
+            Title = "SLK Paid Hub",
+            Text = "Lista de jugadores y consumibles actualizada! 🔄",
+            Duration = 3
+        })
+    end)
+end)
+
+GiftTab:AddSection("Regalar Protein Eggs")
+
+local targetEggPlayerName = ""
+local giftEggAmount = 0
+
+GiftTab:AddTextBox("Nombre del jugador (Username)", function(text)
+    targetEggPlayerName = text
+end)
+
+GiftTab:AddTextBox("Cantidad de Eggs", function(text)
+    giftEggAmount = tonumber(text) or 0
+end)
+
+GiftTab:AddButton("Gift Protein Eggs", function()
+    if targetEggPlayerName == "" or giftEggAmount <= 0 then
+        StarterGui:SetCore("SendNotification", { Title = "Gift Error", Text = "Escribe un jugador y cantidad válida.", Duration = 3 })
+        return
+    end
+
+    local targetPlayer = nil
+    for _, plr in ipairs(Players:GetPlayers()) do
+        if plr.Name:lower() == targetEggPlayerName:lower() or plr.DisplayName:lower() == targetEggPlayerName:lower() then
+            targetPlayer = plr
+            break
+        end
+    end
+
+    if not targetPlayer then
+        StarterGui:SetCore("SendNotification", { Title = "Gift Error", Text = "Jugador no encontrado.", Duration = 3 })
+        return
+    end
+
+    task.spawn(function()
+        local countSent = 0
+        local giftRemote = ReplicatedStorage:FindFirstChild("rEvents") and ReplicatedStorage.rEvents:FindFirstChild("giftRemote")
+        local consumablesFolder = LP:FindFirstChild("consumablesFolder")
+        
+        if giftRemote and consumablesFolder then
+            for i = 1, giftEggAmount do
+                local egg = consumablesFolder:FindFirstChild("Protein Egg")
+                if egg then
+                    pcall(function()
+                        if giftRemote:IsA("RemoteFunction") then
+                            giftRemote:InvokeServer("giftRequest", targetPlayer, egg)
+                        else
+                            giftRemote:FireServer("giftRequest", targetPlayer, egg)
+                        end
+                    end)
+                    countSent = countSent + 1
+                    task.wait(0.15)
+                else
+                    break
+                end
+            end
+        end
+        updateItemCounts()
+        StarterGui:SetCore("SendNotification", { Title = "Gift Finalizado", Text = "Se regalaron " .. countSent .. " Protein Eggs a " .. targetPlayer.DisplayName, Duration = 4 })
+    end)
+end)
+
+GiftTab:AddSection("Regalar Tropical Shakes")
+
+local targetShakePlayerName = ""
+local giftShakeAmount = 0
+
+GiftTab:AddTextBox("Nombre del jugador (Username)", function(text)
+    targetShakePlayerName = text
+end)
+
+GiftTab:AddTextBox("Cantidad de Shakes", function(text)
+    giftShakeAmount = tonumber(text) or 0
+end)
+
+GiftTab:AddButton("Gift Tropical Shakes", function()
+    if targetShakePlayerName == "" or giftShakeAmount <= 0 then
+        StarterGui:SetCore("SendNotification", { Title = "Gift Error", Text = "Escribe un jugador y cantidad válida.", Duration = 3 })
+        return
+    end
+
+    local targetPlayer = nil
+    for _, plr in ipairs(Players:GetPlayers()) do
+        if plr.Name:lower() == targetShakePlayerName:lower() or plr.DisplayName:lower() == targetShakePlayerName:lower() then
+            targetPlayer = plr
+            break
+        end
+    end
+
+    if not targetPlayer then
+        StarterGui:SetCore("SendNotification", { Title = "Gift Error", Text = "Jugador no encontrado.", Duration = 3 })
+        return
+    end
+
+    task.spawn(function()
+        local countSent = 0
+        local giftRemote = ReplicatedStorage:FindFirstChild("rEvents") and ReplicatedStorage.rEvents:FindFirstChild("giftRemote")
+        local consumablesFolder = LP:FindFirstChild("consumablesFolder")
+        
+        if giftRemote and consumablesFolder then
+            for i = 1, giftShakeAmount do
+                local shake = consumablesFolder:FindFirstChild("Tropical Shake")
+                if shake then
+                    pcall(function()
+                        if giftRemote:IsA("RemoteFunction") then
+                            giftRemote:InvokeServer("giftRequest", targetPlayer, shake)
+                        else
+                            giftRemote:FireServer("giftRequest", targetPlayer, shake)
+                        end
+                    end)
+                    countSent = countSent + 1
+                    task.wait(0.15)
+                else
+                    break
+                end
+            end
+        end
+        updateItemCounts()
+        StarterGui:SetCore("SendNotification", { Title = "Gift Finalizado", Text = "Se regalaron " .. countSent .. " Tropical Shakes a " .. targetPlayer.DisplayName, Duration = 4 })
+    end)
+end)
+
+GiftTab:AddSection("Auto Consumir")
 
 local itemList = {
     "Tropical Shake", "Energy Shake", "Protein Bar", "TOUGH Bar", "Protein Shake", "ULTRA Shake", "Energy Bar"
@@ -1501,30 +1539,29 @@ local function activateRandomItems(count)
         shuffledItems[i], shuffledItems[j] = shuffledItems[j], shuffledItems[i]
     end
     for i = 1, math.min(count, #shuffledItems) do
-        local tool = LP.Character:FindFirstChild(shuffledItems[i]) or LP.Backpack:FindFirstChild(shuffledItems[i])
+        local char = LP.Character
+        local backpack = LP:FindFirstChild("Backpack")
+        local tool = (char and char:FindFirstChild(shuffledItems[i])) or (backpack and backpack:FindFirstChild(shuffledItems[i]))
         if tool and LP:FindFirstChild("muscleEvent") then
             local eventName = formatEventName(shuffledItems[i])
-            LP.muscleEvent:FireServer(eventName, tool)
+            pcall(function() LP.muscleEvent:FireServer(eventName, tool) end)
         end
     end
 end
 
-local eatingRunning = false
-task.spawn(function()
-    while true do
-        if eatingRunning then
-            activateRandomItems(4)
-            task.wait(0.5)
-        else
-            task.wait(0.5)
-        end
-    end
-end)
-
-GiftTab:AddButton("Eat Everything", function()
-    eatingRunning = not eatingRunning
-    if eatingRunning then
-        activateRandomItems(4)
+GiftTab:CreateToggle({
+    Name = "Eat Everything",
+    Description = "Consume consumibles aleatorios automáticamente",
+    Default = false
+}, function(state)
+    getgenv().autoEatRunning = state
+    if state then
+        task.spawn(function()
+            while getgenv().autoEatRunning do
+                activateRandomItems(4)
+                task.wait(0.5)
+            end
+        end)
     end
 end)
 
