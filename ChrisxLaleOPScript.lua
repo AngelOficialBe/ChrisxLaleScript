@@ -1322,6 +1322,22 @@ local lastBossPunch = 0
 local lastBossChestClaim = 0
 local lastBossTarget = nil
 local lastPositionedCharacter = nil
+local bossHoverAttachment = nil
+local bossHoverAlign = nil
+local bossHoverRoot = nil
+
+local function stopBossHover()
+    if bossHoverAlign then
+        pcall(function() bossHoverAlign:Destroy() end)
+    end
+    if bossHoverAttachment then
+        pcall(function() bossHoverAttachment:Destroy() end)
+    end
+    bossHoverAlign = nil
+    bossHoverAttachment = nil
+    bossHoverRoot = nil
+    lastPositionedCharacter = nil
+end
 
 local function getBossHealth(model)
     local statsFolder = model:FindFirstChild("stats")
@@ -1424,9 +1440,9 @@ local function equipBossPunch(character, humanoid)
     return tool
 end
 
--- Posiciona una sola vez por boss/personaje. No fuerza el CFrame cada ciclo,
--- porque eso puede competir con la física y hacer que la cámara/personaje tiemblen.
-local function positionAboveBossOnce(hitbox)
+-- Mantiene al personaje suspendido mediante AlignPosition, sin cambiar el CFrame
+-- continuamente. La posición objetivo se actualiza con el boss para seguirlo.
+local function maintainAboveBoss(hitbox)
     local character, humanoid, rootPart = getBossCharacterParts()
     if not character or not humanoid or not rootPart then
         return false
@@ -1435,23 +1451,41 @@ local function positionAboveBossOnce(hitbox)
         return false
     end
 
-    local targetPosition = hitbox.Position + Vector3.new(0, BOSS_HEIGHT, 0)
-    local success, err = pcall(function()
-        -- Conserva la orientación actual para evitar que la cámara gire hacia el boss.
-        local rotationOnly = rootPart.CFrame - rootPart.Position
-        rootPart.AssemblyLinearVelocity = Vector3.zero
-        rootPart.AssemblyAngularVelocity = Vector3.zero
-        rootPart.CFrame = CFrame.new(targetPosition) * rotationOnly
-        rootPart.AssemblyLinearVelocity = Vector3.zero
-        rootPart.AssemblyAngularVelocity = Vector3.zero
-    end)
+    if bossHoverRoot ~= rootPart or not bossHoverAlign or not bossHoverAlign.Parent then
+        stopBossHover()
 
-    if not success then
-        warn("[Auto Boss] No se pudo posicionar el personaje:", err)
-        return false
+        local ok, err = pcall(function()
+            local attachment = Instance.new("Attachment")
+            attachment.Name = "SLK_BossHoverAttachment"
+            attachment.Parent = rootPart
+
+            local align = Instance.new("AlignPosition")
+            align.Name = "SLK_BossHoverPosition"
+            align.Mode = Enum.PositionAlignmentMode.OneAttachment
+            align.Attachment0 = attachment
+            align.ApplyAtCenterOfMass = true
+            align.RigidityEnabled = false
+            align.MaxForce = 100000000
+            align.MaxVelocity = 120
+            align.Responsiveness = 35
+            align.Position = hitbox.Position + Vector3.new(0, BOSS_HEIGHT, 0)
+            align.Parent = rootPart
+
+            bossHoverAttachment = attachment
+            bossHoverAlign = align
+            bossHoverRoot = rootPart
+            lastPositionedCharacter = character
+        end)
+
+        if not ok then
+            warn("[Auto Boss] No se pudo activar el vuelo estable:", err)
+            stopBossHover()
+            return false
+        end
     end
 
-    lastPositionedCharacter = character
+    -- Solo mueve el objetivo del constraint; no gira la cámara ni fuerza el CFrame.
+    bossHoverAlign.Position = hitbox.Position + Vector3.new(0, BOSS_HEIGHT, 0)
     return true
 end
 
@@ -1511,7 +1545,11 @@ BossTab:CreateToggle({
 }, function(state)
     AutoBoss = state
     lastBossTarget = nil
-    lastPositionedCharacter = nil
+    if not state then
+        stopBossHover()
+    else
+        lastPositionedCharacter = nil
+    end
 
     pcall(function()
         StarterGui:SetCore("SendNotification", {
@@ -1528,7 +1566,9 @@ task.spawn(function()
 
         if not AutoBoss then
             lastBossTarget = nil
-            lastPositionedCharacter = nil
+            if bossHoverAlign or bossHoverAttachment then
+                stopBossHover()
+            end
             continue
         end
 
@@ -1546,18 +1586,14 @@ task.spawn(function()
         if boss and hitbox then
             if boss ~= lastBossTarget then
                 lastBossTarget = boss
-                lastPositionedCharacter = nil
                 print("[Auto Boss] Boss detectado:", boss.Name)
             end
 
-            -- Solo recoloca al aparecer otro boss o si el jugador reaparece.
-            if character ~= lastPositionedCharacter then
-                positionAboveBossOnce(hitbox)
-            end
+            maintainAboveBoss(hitbox)
             attackActiveBoss()
         else
             lastBossTarget = nil
-            lastPositionedCharacter = nil
+            stopBossHover()
             tryClaimBossChest()
         end
     end
