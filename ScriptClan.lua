@@ -1258,6 +1258,26 @@ for _, rockInfo in ipairs(rockList) do
     end)
 end
 
+-- ==================== PESTAÑA AUTO BOSS ====================
+BossTab:AddSection("Auto Boss Farm")
+
+BossTab:CreateToggle({
+    Name = "Auto Boss Farm",
+    Description = "Se posiciona a altura 70 + ataque ultra rápido + reclama el cofre automáticamente",
+    Default = false
+}, function(state)
+    AutoBoss = state
+    if state then
+        pcall(function()
+            StarterGui:SetCore("SendNotification", {
+                Title = "SLK Paid Hub",
+                Text = "Auto Boss Farm Activado 👹",
+                Duration = 3
+            })
+        end)
+    end
+end)
+
 -- ==================== PESTAÑA STATS & CALCULATOR ====================
 StatsTab:AddSection("Monitoreo en Tiempo Real")
 
