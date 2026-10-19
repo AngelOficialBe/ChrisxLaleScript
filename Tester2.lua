@@ -10,7 +10,6 @@ local Lighting = game:GetService("Lighting")
 local StarterGui = game:GetService("StarterGui")
 local TeleportService = game:GetService("TeleportService")
 local HttpService = game:GetService("HttpService")
-local CollectionService = game:GetService("CollectionService")
 
 local LP = Players.LocalPlayer
 
@@ -45,9 +44,6 @@ local RebirthsCombination = false
 local RebirthChaos = false
 local RebirthsTitans = false
 
--- Variables de Estado de Boss
-local AutoBoss = false
-
 -- Variables de Configuración y Autoreconectador
 local AutoRejoinActive = false
 local AutoExecuteActive = false
@@ -70,7 +66,7 @@ local function LoadConfig()
     if type(readfile) == "function" and type(isfile) == "function" then
         pcall(function()
             if isfile(ConfigFileName) then
-                local savedData = HttpService:JSONDecode(readfile(ConfigFileName))
+                local savedData = HttpService:JSONEncode(readfile(ConfigFileName))
                 if type(savedData) == "table" then
                     AutoExecuteActive = savedData.AutoExecute == true
                     AutoRejoinActive = savedData.AutoRejoin == true
@@ -495,109 +491,6 @@ local function triggerTitans()
     end
 end
 
--- ==================== AUTO BOSS FARM ====================
-local BOSS_HEIGHT = 70
-local BOSS_PUNCH_DELAY = 0.03
-local BOSS_CHEST_DELAY = 1.2
-
-local lastBossPunch = 0
-local lastBossClaim = 0
-
-local function getBoss()
-    for _, model in ipairs(CollectionService:GetTagged("BossEventBoss")) do
-        if model:IsA("Model") and model:IsDescendantOf(workspace) then
-            local hitbox = model:FindFirstChild("BossDamageHitbox", true)
-            if hitbox and hitbox:IsA("BasePart") then
-                local stats = model:FindFirstChild("stats")
-                local health = stats and stats:FindFirstChild("Health")
-                if health and health.Value > 0 then
-                    return model, hitbox
-                end
-            end
-        end
-    end
-
-    local events = workspace:FindFirstChild("Events")
-    if events then
-        local bossFolder = events:FindFirstChild("BossEvent") or events:FindFirstChild("BossArena")
-        if bossFolder then
-            for _, model in ipairs(bossFolder:GetDescendants()) do
-                if model:IsA("Model") then
-                    local hitbox = model:FindFirstChild("BossDamageHitbox", true)
-                    if hitbox and hitbox:IsA("BasePart") then
-                        local stats = model:FindFirstChild("stats")
-                        local health = stats and stats:FindFirstChild("Health")
-                        if health and health.Value > 0 then
-                            return model, hitbox
-                        end
-                    end
-                end
-            end
-        end
-    end
-    return nil, nil
-end
-
-local function claimBossChest()
-    pcall(function()
-        local rEvents = ReplicatedStorage:FindFirstChild("rEvents")
-        if rEvents then
-            local checkChest = rEvents:FindFirstChild("checkChestRemote")
-            if checkChest then
-                local chests = {
-                    "Boss Chest", "Hallowed Chest", "Magma Chest",
-                    "Mythical Chest", "Golden Chest", "Enchanted Chest", "Legends Chest"
-                }
-                for _, chest in ipairs(chests) do
-                    checkChest:InvokeServer(chest)
-                end
-            end
-        end
-    end)
-end
-
-RunService.Heartbeat:Connect(function()
-    if not AutoBoss then return end
-
-    local character = LP.Character
-    if not character or not character.Parent then return end
-
-    local humanoidRootPart = character:FindFirstChild("HumanoidRootPart")
-    local humanoid = character:FindFirstChildOfClass("Humanoid")
-    if not humanoidRootPart or not humanoid then return end
-
-    local boss, hitbox = getBoss()
-    if boss and hitbox then
-        -- Posición a altura 70 (seguro)
-        humanoidRootPart.CFrame = CFrame.new(hitbox.Position + Vector3.new(0, BOSS_HEIGHT, 0))
-
-        -- Equipar Punch
-        local punch = character:FindFirstChild("Punch") or (LP:FindFirstChild("Backpack") and LP.Backpack:FindFirstChild("Punch"))
-        if punch and punch.Parent == LP.Backpack then
-            humanoid:EquipTool(punch)
-        end
-
-        -- Ataque ultra rápido
-        if os.clock() - lastBossPunch >= BOSS_PUNCH_DELAY then
-            lastBossPunch = os.clock()
-            pcall(function()
-                local muscleEvent = LP:FindFirstChild("muscleEvent")
-                if muscleEvent then
-                    muscleEvent:FireServer("punch", "leftHand")
-                    muscleEvent:FireServer("punch", "rightHand")
-                end
-                if punch then punch:Activate() end
-            end)
-        end
-    else
-        -- Reclamar cofre cuando el boss muere
-        if os.clock() - lastBossClaim >= BOSS_CHEST_DELAY then
-            lastBossClaim = os.clock()
-            claimBossChest()
-        end
-    end
-end)
-
 -- ==================== LIBRERÍA DE INTERFAZ GRÁFICA ====================
 local Library = {}
 
@@ -784,6 +677,7 @@ function Library:CreateWindow(config)
         Size = UDim2.new(1, -24, 0, 1)
     }, Sidebar)
 
+    -- ==================== CORRECCIÓN: SCROLLINGFRAME PARA EL MENÚ LATERAL ====================
     local NavContainer = Create("ScrollingFrame", {
         Name = "NavContainer",
         Size = UDim2.new(1, -6, 1, -64),
@@ -1207,25 +1101,6 @@ FarmingTab:CreateToggle({
         FastFarm500 = false 
         FastFarm2k = false 
         FastFarm10k = false 
-    end
-end)
-
-FarmingTab:AddSection("Boss Farm")
-
-FarmingTab:CreateToggle({
-    Name = "Auto Boss Farm",
-    Description = "Se pone encima del boss (altura 70) + ataque rápido + reclama el cofre",
-    Default = false
-}, function(state)
-    AutoBoss = state
-    if state then
-        pcall(function()
-            StarterGui:SetCore("SendNotification", {
-                Title = "SLK Paid Hub",
-                Text = "Auto Boss Farm Activado 💪",
-                Duration = 3
-            })
-        end)
     end
 end)
 
