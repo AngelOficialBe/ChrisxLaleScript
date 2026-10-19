@@ -1512,14 +1512,18 @@ task.spawn(function()
             local eggCount, shakeCount = 0, 0
             local backpack = LP:FindFirstChild("Backpack")
             if backpack then
-                for _, item in ipairs(backpack:GetChildren()) do
+                local items = backpack:GetChildren()
+                for i = 1, #items do
+                    local item = items[i]
                     if item.Name == "Protein Egg" then eggCount = eggCount + 1
                     elseif item.Name == "Tropical Shake" or item.Name == "Piñas" then shakeCount = shakeCount + 1 end
                 end
             end
             local consumablesFolder = LP:FindFirstChild("consumablesFolder")
             if consumablesFolder then
-                for _, item in ipairs(consumablesFolder:GetChildren()) do
+                local items = consumablesFolder:GetChildren()
+                for i = 1, #items do
+                    local item = items[i]
                     if item.Name == "Protein Egg" then eggCount = eggCount + 1
                     elseif item.Name == "Tropical Shake" then shakeCount = shakeCount + 1 end
                 end
@@ -1547,7 +1551,7 @@ end
 
 local function activateRandomItems(count)
     local shuffledItems = {}
-    for _, item in ipairs(itemList) do table.insert(shuffledItems, item) end
+    for i = 1, #itemList do table.insert(shuffledItems, itemList[i]) end
     for i = #shuffledItems, 2, -1 do
         local j = math.random(i)
         shuffledItems[i], shuffledItems[j] = shuffledItems[j], shuffledItems[i]
