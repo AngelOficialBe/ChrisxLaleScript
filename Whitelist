@@ -1,7 +1,7 @@
 -- ==================== CONFIGURACIÓN DE SEGURIDAD ====================
 local ValidKey = "SLKONTOP" -- Key escrita en texto
 local MainScriptURL = "https://raw.githubusercontent.com/AngelOficialBe/ChrisxLaleScript/refs/heads/main/ScriptClan.lua" 
-local WhitelistURL = ""
+local WhitelistURL = "https://raw.githubusercontent.com/AngelOficialBe/ChrisxLaleScript/refs/heads/main/Key"
 
 local Players = game:GetService("Players")
 local LP = Players.LocalPlayer
