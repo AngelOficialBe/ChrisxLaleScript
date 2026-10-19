@@ -4,12 +4,12 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local VirtualUser = game:GetService("VirtualUser")
 local TweenService = game:GetService("TweenService")
 local RunService = game:GetService("RunService")
+local CoreGui = game:GetService("CoreGui")
 local UserInputService = game:GetService("UserInputService")
 local Lighting = game:GetService("Lighting")
 local StarterGui = game:GetService("StarterGui")
 local TeleportService = game:GetService("TeleportService")
 local HttpService = game:GetService("HttpService")
-local CollectionService = game:GetService("CollectionService")
 
 local LP = Players.LocalPlayer
 
@@ -44,12 +44,6 @@ local RebirthsCombination = false
 local RebirthChaos = false
 local RebirthsTitans = false
 
--- Variables de Estado de Auto Boss
-getgenv().AutoBoss = false
-local BossHeight = 70
-local BossPunchDelay = 0.03
-local BossChestDelay = 1.2
-
 -- Variables de Configuración y Autoreconectador
 local AutoRejoinActive = false
 local AutoExecuteActive = false
@@ -72,7 +66,7 @@ local function LoadConfig()
     if type(readfile) == "function" and type(isfile) == "function" then
         pcall(function()
             if isfile(ConfigFileName) then
-                local savedData = HttpService:JSONDecode(readfile(ConfigFileName))
+                local savedData = HttpService:JSONEncode(readfile(ConfigFileName))
                 if type(savedData) == "table" then
                     AutoExecuteActive = savedData.AutoExecute == true
                     AutoRejoinActive = savedData.AutoRejoin == true
@@ -84,23 +78,20 @@ end
 
 LoadConfig()
 
--- Lógica de Auto Rejoin (Usando PlayerGui para evitar bloqueos en Delta)
-local promptOverlay = LP:WaitForChild("PlayerGui"):FindFirstChild("RobloxPromptGui")
-if promptOverlay and promptOverlay:FindFirstChild("promptOverlay") then
-    promptOverlay.promptOverlay.ChildAdded:Connect(function(child)
-        if AutoRejoinActive and (child.Name == "ErrorPrompt" or child:FindFirstChild("ErrorTitle")) then
-            pcall(function()
-                StarterGui:SetCore("SendNotification", {
-                    Title = "SLK Paid Hub",
-                    Text = "Reconectando al servidor... 🔄",
-                    Duration = 5
-                })
-            end)
-            task.wait(1)
-            TeleportService:Teleport(game.PlaceId, LP)
-        end
-    end)
-end
+-- Lógica de Auto Rejoin
+CoreGui.RobloxPromptGui.promptOverlay.ChildAdded:Connect(function(child)
+    if AutoRejoinActive and (child.Name == "ErrorPrompt" or child:FindFirstChild("ErrorTitle")) then
+        pcall(function()
+            StarterGui:SetCore("SendNotification", {
+                Title = "SLK Paid Hub",
+                Text = "Reconectando al servidor... 🔄",
+                Duration = 5
+            })
+        end)
+        task.wait(1)
+        TeleportService:Teleport(game.PlaceId, LP)
+    end
+end)
 
 -- ==================== DICCIONARIO Y SISTEMA DE MASCOTAS ====================
 local PETS = {
@@ -500,99 +491,7 @@ local function triggerTitans()
     end
 end
 
--- ==================== LÓGICA FUNCIONAL DE AUTO BOSS ====================
-local function getBoss()
-    for _, model in ipairs(CollectionService:GetTagged("BossEventBoss")) do
-        if model:IsA("Model") and model:IsDescendantOf(workspace) then
-            local hitbox = model:FindFirstChild("BossDamageHitbox", true)
-            if hitbox and hitbox:IsA("BasePart") then
-                local stats = model:FindFirstChild("stats")
-                local health = stats and stats:FindFirstChild("Health")
-                if health and health.Value > 0 then
-                    return model, hitbox
-                end
-            end
-        end
-    end
-    local events = workspace:FindFirstChild("Events")
-    if events then
-        local bossFolder = events:FindFirstChild("BossEvent") or events:FindFirstChild("BossArena")
-        if bossFolder then
-            for _, model in ipairs(bossFolder:GetDescendants()) do
-                if model:IsA("Model") then
-                    local hitbox = model:FindFirstChild("BossDamageHitbox", true)
-                    if hitbox and hitbox:IsA("BasePart") then
-                        local stats = model:FindFirstChild("stats")
-                        local health = stats and stats:FindFirstChild("Health")
-                        if health and health.Value > 0 then
-                            return model, hitbox
-                        end
-                    end
-                end
-            end
-        end
-    end
-    return nil, nil
-end
-
-local function claimBossChest()
-    pcall(function()
-        local rEvents = ReplicatedStorage:FindFirstChild("rEvents")
-        if rEvents then
-            local checkChest = rEvents:FindFirstChild("checkChestRemote")
-            if checkChest then
-                local chests = { "Boss Chest", "Hallowed Chest", "Magma Chest", "Mythical Chest", "Golden Chest", "Enchanted Chest", "Legends Chest" }
-                for _, chest in ipairs(chests) do
-                    checkChest:InvokeServer(chest)
-                end
-            end
-        end
-    end)
-end
-
-local lastBossPunch = 0
-local lastBossClaim = 0
-
-RunService.Heartbeat:Connect(function()
-    if not getgenv().AutoBoss then return end
-    
-    local Character = LP.Character
-    if not Character or not Character.Parent then return end
-    local HumanoidRootPart = Character:FindFirstChild("HumanoidRootPart")
-    local Humanoid = Character:FindFirstChildOfClass("Humanoid")
-    if not HumanoidRootPart || not Humanoid || Humanoid.Health <= 0 then return end
-    
-    local boss, hitbox = getBoss()
-    if boss and hitbox then
-        HumanoidRootPart.CFrame = CFrame.new(hitbox.Position + Vector3.new(0, BossHeight, 0))
-        
-        local punch = Character:FindFirstChild("Punch") or LP.Backpack:FindFirstChild("Punch")
-        if punch and punch.Parent == LP.Backpack then
-            Humanoid:EquipTool(punch)
-        end
-        
-        if os.clock() - lastBossPunch >= BossPunchDelay then
-            lastBossPunch = os.clock()
-            pcall(function()
-                local muscleEvent = LP:FindFirstChild("muscleEvent")
-                if muscleEvent then
-                    muscleEvent:FireServer("punch", "leftHand")
-                    muscleEvent:FireServer("punch", "rightHand")
-                end
-                if punch then
-                    punch:Activate()
-                end
-            end)
-        end
-    else
-        if os.clock() - lastBossClaim >= BossChestDelay then
-            lastBossClaim = os.clock()
-            claimBossChest()
-        end
-    end
-end)
-
--- ==================== LIBRERÍA DE INTERFAZ GRÁFICA (ADAPTADA PARA DELTA) ====================
+-- ==================== LIBRERÍA DE INTERFAZ GRÁFICA ====================
 local Library = {}
 
 local function Create(className, properties, parent)
@@ -632,8 +531,7 @@ function Library:CreateWindow(config)
     local WindowObj = {}
     local windowTitle = config.Title or "👑 ChrisxLale Script"
     
-    -- FORZADO A PLAYERGUI PARA QUE DELTA LO MUESTRE SIN PROBLEMAS
-    local parentUI = LP:WaitForChild("PlayerGui")
+    local parentUI = (gethui and gethui()) or CoreGui or LP:WaitForChild("PlayerGui")
     if parentUI:FindFirstChild("ChrisxLale_AestheticUI") then
         parentUI.ChrisxLale_AestheticUI:Destroy()
     end
@@ -641,8 +539,7 @@ function Library:CreateWindow(config)
     local ScreenGui = Create("ScreenGui", {
         Name = "ChrisxLale_AestheticUI",
         ZIndexBehavior = Enum.ZIndexBehavior.Sibling,
-        IgnoreGuiInset = true,
-        ResetOnSpawn = false
+        IgnoreGuiInset = true
     }, parentUI)
 
     local MainFrame = Create("Frame", {
@@ -780,6 +677,7 @@ function Library:CreateWindow(config)
         Size = UDim2.new(1, -24, 0, 1)
     }, Sidebar)
 
+    -- ==================== CORRECCIÓN: SCROLLINGFRAME PARA EL MENÚ LATERAL ====================
     local NavContainer = Create("ScrollingFrame", {
         Name = "NavContainer",
         Size = UDim2.new(1, -6, 1, -64),
@@ -815,8 +713,7 @@ function Library:CreateWindow(config)
         ["Principal"] = "🏠",
         ["Farming"] = "🏋️",
         ["Rebirth"] = "🌌",
-        ["Auto Rocks"] = "⛰️",
-		["Auto Boss"] = "👹",
+        ["Auto Rocks"] = "🪨",
         ["Stats"] = "📊",
         ["Gift"] = "🎁",
         ["Teleport"] = "🌀",
@@ -963,18 +860,6 @@ function Library:CreateWindow(config)
             }, page)
         end
 
-        function TabMethods:AddLabel(labelText)
-            return Create("TextLabel", {
-                Size = UDim2.new(1, 0, 0, 24),
-                BackgroundTransparency = 1,
-                Text = labelText,
-                TextColor3 = Color3.fromRGB(230, 230, 240),
-                Font = Enum.Font.GothamBold,
-                TextSize = 16,
-                TextXAlignment = Enum.TextXAlignment.Left
-            }, page)
-        end
-
         function TabMethods:CreateToggle(config, callback)
             local titleText = config.Name or "Toggle"
             local descText = config.Description or ""
@@ -1099,116 +984,6 @@ function Library:CreateWindow(config)
             return box
         end
 
-        function TabMethods:AddDropdown(titleText, callback)
-            local expanded = false
-            local options = {}
-            local selectedOption = "Seleccionar..."
-
-            local container = Create("Frame", {
-                Size = UDim2.new(1, -6, 0, 38),
-                BackgroundColor3 = Color3.fromRGB(24, 24, 30),
-                BorderSizePixel = 0,
-                ClipsDescendants = true,
-                ZIndex = 5
-            }, page)
-            Create("UICorner", {CornerRadius = UDim.new(0, 8)}, container)
-
-            local titleLabel = Create("TextLabel", {
-                Size = UDim2.new(1, -30, 0, 38),
-                Position = UDim2.new(0, 12, 0, 0),
-                BackgroundTransparency = 1,
-                Text = titleText .. ": " .. selectedOption,
-                TextColor3 = Color3.fromRGB(240, 240, 250),
-                Font = Enum.Font.GothamBold,
-                TextSize = 12,
-                TextXAlignment = Enum.TextXAlignment.Left,
-                ZIndex = 5
-            }, container)
-
-            local arrowBtn = Create("TextButton", {
-                Size = UDim2.new(0, 30, 0, 38),
-                Position = UDim2.new(1, -30, 0, 0),
-                BackgroundTransparency = 1,
-                Text = "▼",
-                TextColor3 = Color3.fromRGB(160, 160, 180),
-                Font = Enum.Font.GothamBold,
-                TextSize = 12,
-                ZIndex = 5
-            }, container)
-
-            local optionList = Create("ScrollingFrame", {
-                Size = UDim2.new(1, 0, 0, 120),
-                Position = UDim2.new(0, 0, 0, 38),
-                BackgroundTransparency = 1,
-                BorderSizePixel = 0,
-                ScrollBarThickness = 3,
-                CanvasSize = UDim2.new(0, 0, 0, 0),
-                ZIndex = 6
-            }, container)
-
-            local listLayout = Create("UIListLayout", { SortOrder = Enum.SortOrder.LayoutOrder }, optionList)
-            
-            listLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
-                optionList.CanvasSize = UDim2.new(0, 0, 0, listLayout.AbsoluteContentSize.Y)
-            end)
-
-            local DropdownMethods = {}
-
-            function DropdownMethods:Add(opt)
-                if table.find(options, opt) then return end
-                table.insert(options, opt)
-
-                local optBtn = Create("TextButton", {
-                    Size = UDim2.new(1, 0, 0, 28),
-                    BackgroundColor3 = Color3.fromRGB(18, 18, 24),
-                    BorderSizePixel = 0,
-                    Text = "  " .. opt,
-                    TextColor3 = Color3.fromRGB(200, 200, 220),
-                    Font = Enum.Font.GothamMedium,
-                    TextSize = 11,
-                    TextXAlignment = Enum.TextXAlignment.Left,
-                    ZIndex = 6
-                }, optionList)
-
-                optBtn.MouseButton1Click:Connect(function()
-                    selectedOption = opt
-                    titleLabel.Text = titleText .. ": " .. selectedOption
-                    expanded = false
-                    container.Size = UDim2.new(1, -6, 0, 38)
-                    arrowBtn.Text = "▼"
-                    pcall(callback, opt)
-                end)
-            end
-
-            function DropdownMethods:Clear()
-                options = {}
-                for _, child in ipairs(optionList:GetChildren()) do
-                    if child:IsA("TextButton") then child:Destroy() end
-                end
-            end
-
-            local toggleFunc = function()
-                expanded = not expanded
-                if expanded then
-                    local listHeight = math.min(listLayout.AbsoluteContentSize.Y, 120)
-                    container.Size = UDim2.new(1, -6, 0, 38 + math.max(listHeight, 28))
-                    arrowBtn.Text = "▲"
-                else
-                    container.Size = UDim2.new(1, -6, 0, 38)
-                    arrowBtn.Text = "▼"
-                end
-            end
-
-            arrowBtn.MouseButton1Click:Connect(toggleFunc)
-            titleLabel.InputBegan:Connect(function(input)
-                if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-                    toggleFunc()
-                end
-            end)
-
-            return DropdownMethods
-        end
-
         return TabMethods
     end
 
@@ -1225,8 +1000,7 @@ local Window = Library:CreateWindow({
 local PrincipalTab = Window:CreateTab("Principal", "🏠", "Bienvenido al script, " .. LP.Name)
 local FarmingTab = Window:CreateTab("Farming", "🏋️", "Automatización de recursos")
 local RebirthTab = Window:CreateTab("Rebirth", "🌌", "Sistema de reencarnaciones")
-local RocksTab = Window:CreateTab("Auto Rocks", "⛰️", "Farming automático de rocas")
-local AutoBossTab = Window:CreateTab("Auto Boss", "👹", "Combate automático")
+local RocksTab = Window:CreateTab("Auto Rocks", "🪨", "Farming automático de rocas")
 local StatsTab = Window:CreateTab("Stats", "📊", "Calculadoras y monitoreo en tiempo real")
 local GiftTab = Window:CreateTab("Gift", "🎁", "Regalar consumibles a otros jugadores")
 local TeleportTab = Window:CreateTab("Teleport", "🌀", "Viaja por el mapa")
@@ -1482,24 +1256,6 @@ for _, rockInfo in ipairs(rockList) do
     end)
 end
 
--- ==================== PESTAÑA AUTO BOSS ====================
-AutoBossTab:AddSection("Auto Bosses")
-
-AutoBossTab:CreateToggle({
-    Name = "Auto Boss Farm",
-    Description = "Se posiciona a altura 70, ataca rápido y reclama cofres",
-    Default = false
-}, function(state)
-    getgenv().AutoBoss = state
-    pcall(function()
-        StarterGui:SetCore("SendNotification", {
-            Title = "SLK Paid Hub",
-            Text = state and "Auto Boss Activado ⚔️" or "Auto Boss Desactivado ❌",
-            Duration = 3
-        })
-    end)
-end)
-
 -- ==================== PESTAÑA STATS & CALCULATOR ====================
 StatsTab:AddSection("Monitoreo en Tiempo Real")
 
@@ -1586,103 +1342,17 @@ task.spawn(function()
     end
 end)
 
--- ==================== PESTAÑA GIFT ADAPTADA ====================
-GiftTab:AddLabel("Gifting Protein egg:").TextSize = 22
-local proteinEggLabel = GiftTab:AddLabel("Protein Eggs: 0")
-proteinEggLabel.TextSize = 20
+-- ==================== PESTAÑA GIFT ====================
+GiftTab:AddSection("Monitoreo de Consumibles")
 
-local selectedEggPlayer = nil
-local eggCount = 0
-local eggDropdown = GiftTab:AddDropdown("Player to Gift Eggs", function(selectedDisplayName)
-    for _, plr in ipairs(Players:GetPlayers()) do
-        if plr.DisplayName == selectedDisplayName then
-            selectedEggPlayer = plr
-            break
-        end
-    end
-end)
+local proteinEggBtn = GiftTab:AddButton("Protein Eggs: 0", function() end)
+local tropicalShakeBtn = GiftTab:AddButton("Tropical Shakes: 0", function() end)
 
-GiftTab:AddButton("🔄 Actualizar Lista (Eggs)", function()
-    eggDropdown:Clear()
-    for _, plr in ipairs(Players:GetPlayers()) do
-        if plr ~= LP then eggDropdown:Add(plr.DisplayName) end
-    end
-    StarterGui:SetCore("SendNotification", { Title = "SLK Paid Hub", Text = "Lista actualizada 🔄", Duration = 2 })
-end)
-
-for _, plr in ipairs(Players:GetPlayers()) do
-    if plr ~= LP then eggDropdown:Add(plr.DisplayName) end
-end
-Players.PlayerAdded:Connect(function(plr)
-    if plr ~= LP then eggDropdown:Add(plr.DisplayName) end
-end)
-
-GiftTab:AddTextBox("Amount of Eggs", function(text)
-    eggCount = tonumber(text) or 0
-end)
-
-GiftTab:AddButton("Gift Eggs", function()
-    if selectedEggPlayer and eggCount > 0 then
-        for i = 1, eggCount do
-            local egg = LP.consumablesFolder:FindFirstChild("Protein Egg")
-            if egg then
-                ReplicatedStorage.rEvents.giftRemote:InvokeServer("giftRequest", selectedEggPlayer, egg)
-                task.wait(0.1)
-            end
-        end
-    end
-end)
-
-GiftTab:AddLabel("Gifting Tropical Shakes:").TextSize = 22
-local tropicalShakeLabel = GiftTab:AddLabel("Tropical Shakes: 0")
-tropicalShakeLabel.TextSize = 18
-
-local selectedShakePlayer = nil
-local shakeCount = 0
-local shakeDropdown = GiftTab:AddDropdown("Player to Gift Tropical Shakes", function(selectedDisplayName)
-    for _, plr in ipairs(Players:GetPlayers()) do
-        if plr.DisplayName == selectedDisplayName then
-            selectedShakePlayer = plr
-            break
-        end
-    end
-end)
-
-GiftTab:AddButton("🔄 Actualizar Lista (Shakes)", function()
-    shakeDropdown:Clear()
-    for _, plr in ipairs(Players:GetPlayers()) do
-        if plr ~= LP then shakeDropdown:Add(plr.DisplayName) end
-    end
-    StarterGui:SetCore("SendNotification", { Title = "SLK Paid Hub", Text = "Lista actualizada 🔄", Duration = 2 })
-end)
-
-for _, plr in ipairs(Players:GetPlayers()) do
-    if plr ~= LP then shakeDropdown:Add(plr.DisplayName) end
-end
-Players.PlayerAdded:Connect(function(plr)
-    if plr ~= LP then shakeDropdown:Add(plr.DisplayName) end
-end)
-
-GiftTab:AddTextBox("Tropical Shakes gift", function(text)
-    shakeCount = tonumber(text) or 0
-end)
-
-GiftTab:AddButton("Gift Tropical Shakes", function()
-    if selectedShakePlayer and shakeCount > 0 then
-        for i = 1, shakeCount do
-            local shake = LP.consumablesFolder:FindFirstChild("Tropical Shake")
-            if shake then
-                ReplicatedStorage.rEvents.giftRemote:InvokeServer("giftRequest", selectedShakePlayer, shake)
-                task.wait(0.1)
-            end
-        end
-    end
-end)
-
-local function updateItemCount()
+local function updateItemCounts()
     local proteinEggCount = 0
     local tropicalShakeCount = 0
-    local backpack = LP:WaitForChild("Backpack")
+    
+    local backpack = LP:FindFirstChild("Backpack")
     if backpack then
         for _, item in ipairs(backpack:GetChildren()) do
             if item.Name == "Protein Egg" then
@@ -1692,16 +1362,163 @@ local function updateItemCount()
             end
         end
     end
-    proteinEggLabel.Text = "Protein Eggs: " .. proteinEggCount
-    tropicalShakeLabel.Text = "Tropical Shakes: " .. tropicalShakeCount
+    
+    local consumablesFolder = LP:FindFirstChild("consumablesFolder")
+    if consumablesFolder then
+        for _, item in ipairs(consumablesFolder:GetChildren()) do
+            if item.Name == "Protein Egg" then
+                proteinEggCount = proteinEggCount + 1
+            elseif item.Name == "Tropical Shake" then
+                tropicalShakeCount = tropicalShakeCount + 1
+            end
+        end
+    end
+
+    proteinEggBtn.Text = "Protein Eggs: " .. proteinEggCount
+    tropicalShakeBtn.Text = "Tropical Shakes: " .. tropicalShakeCount
 end
 
 task.spawn(function()
     while true do
-        updateItemCount()
-        task.wait(0.25)
+        updateItemCounts()
+        task.wait(1)
     end
 end)
+
+GiftTab:AddSection("Actualizar Lista")
+
+GiftTab:AddButton("🔄 Refresh Players / Items", function()
+    updateItemCounts()
+    pcall(function()
+        StarterGui:SetCore("SendNotification", {
+            Title = "SLK Paid Hub",
+            Text = "Lista de jugadores y consumibles actualizada! 🔄",
+            Duration = 3
+        })
+    end)
+end)
+
+GiftTab:AddSection("Regalar Protein Eggs")
+
+local targetEggPlayerName = ""
+local giftEggAmount = 0
+
+GiftTab:AddTextBox("Nombre del jugador (Username)", function(text)
+    targetEggPlayerName = text
+end)
+
+GiftTab:AddTextBox("Cantidad de Eggs", function(text)
+    giftEggAmount = tonumber(text) or 0
+end)
+
+GiftTab:AddButton("Gift Protein Eggs", function()
+    if targetEggPlayerName == "" or giftEggAmount <= 0 then
+        StarterGui:SetCore("SendNotification", { Title = "Gift Error", Text = "Escribe un jugador y cantidad válida.", Duration = 3 })
+        return
+    end
+
+    local targetPlayer = nil
+    for _, plr in ipairs(Players:GetPlayers()) do
+        if plr.Name:lower() == targetEggPlayerName:lower() or plr.DisplayName:lower() == targetEggPlayerName:lower() then
+            targetPlayer = plr
+            break
+        end
+    end
+
+    if not targetPlayer then
+        StarterGui:SetCore("SendNotification", { Title = "Gift Error", Text = "Jugador no encontrado.", Duration = 3 })
+        return
+    end
+
+    task.spawn(function()
+        local countSent = 0
+        local giftRemote = ReplicatedStorage:FindFirstChild("rEvents") and ReplicatedStorage.rEvents:FindFirstChild("giftRemote")
+        local consumablesFolder = LP:FindFirstChild("consumablesFolder")
+        
+        if giftRemote and consumablesFolder then
+            for i = 1, giftEggAmount do
+                local egg = consumablesFolder:FindFirstChild("Protein Egg")
+                if egg then
+                    pcall(function()
+                        if giftRemote:IsA("RemoteFunction") then
+                            giftRemote:InvokeServer("giftRequest", targetPlayer, egg)
+                        else
+                            giftRemote:FireServer("giftRequest", targetPlayer, egg)
+                        end
+                    end)
+                    countSent = countSent + 1
+                    task.wait(0.15)
+                else
+                    break
+                end
+            end
+        end
+        updateItemCounts()
+        StarterGui:SetCore("SendNotification", { Title = "Gift Finalizado", Text = "Se regalaron " .. countSent .. " Protein Eggs a " .. targetPlayer.DisplayName, Duration = 4 })
+    end)
+end)
+
+GiftTab:AddSection("Regalar Tropical Shakes")
+
+local targetShakePlayerName = ""
+local giftShakeAmount = 0
+
+GiftTab:AddTextBox("Nombre del jugador (Username)", function(text)
+    targetShakePlayerName = text
+end)
+
+GiftTab:AddTextBox("Cantidad de Shakes", function(text)
+    giftShakeAmount = tonumber(text) or 0
+end)
+
+GiftTab:AddButton("Gift Tropical Shakes", function()
+    if targetShakePlayerName == "" or giftShakeAmount <= 0 then
+        StarterGui:SetCore("SendNotification", { Title = "Gift Error", Text = "Escribe un jugador y cantidad válida.", Duration = 3 })
+        return
+    end
+
+    local targetPlayer = nil
+    for _, plr in ipairs(Players:GetPlayers()) do
+        if plr.Name:lower() == targetShakePlayerName:lower() or plr.DisplayName:lower() == targetShakePlayerName:lower() then
+            targetPlayer = plr
+            break
+        end
+    end
+
+    if not targetPlayer then
+        StarterGui:SetCore("SendNotification", { Title = "Gift Error", Text = "Jugador no encontrado.", Duration = 3 })
+        return
+    end
+
+    task.spawn(function()
+        local countSent = 0
+        local giftRemote = ReplicatedStorage:FindFirstChild("rEvents") and ReplicatedStorage.rEvents:FindFirstChild("giftRemote")
+        local consumablesFolder = LP:FindFirstChild("consumablesFolder")
+        
+        if giftRemote and consumablesFolder then
+            for i = 1, giftShakeAmount do
+                local shake = consumablesFolder:FindFirstChild("Tropical Shake")
+                if shake then
+                    pcall(function()
+                        if giftRemote:IsA("RemoteFunction") then
+                            giftRemote:InvokeServer("giftRequest", targetPlayer, shake)
+                        else
+                            giftRemote:FireServer("giftRequest", targetPlayer, shake)
+                        end
+                    end)
+                    countSent = countSent + 1
+                    task.wait(0.15)
+                else
+                    break
+                end
+            end
+        end
+        updateItemCounts()
+        StarterGui:SetCore("SendNotification", { Title = "Gift Finalizado", Text = "Se regalaron " .. countSent .. " Tropical Shakes a " .. targetPlayer.DisplayName, Duration = 4 })
+    end)
+end)
+
+GiftTab:AddSection("Auto Consumir")
 
 local itemList = {
     "Tropical Shake", "Energy Shake", "Protein Bar", "TOUGH Bar", "Protein Shake", "ULTRA Shake", "Energy Bar"
@@ -1722,30 +1539,29 @@ local function activateRandomItems(count)
         shuffledItems[i], shuffledItems[j] = shuffledItems[j], shuffledItems[i]
     end
     for i = 1, math.min(count, #shuffledItems) do
-        local tool = LP.Character:FindFirstChild(shuffledItems[i]) or LP.Backpack:FindFirstChild(shuffledItems[i])
+        local char = LP.Character
+        local backpack = LP:FindFirstChild("Backpack")
+        local tool = (char and char:FindFirstChild(shuffledItems[i])) or (backpack and backpack:FindFirstChild(shuffledItems[i]))
         if tool and LP:FindFirstChild("muscleEvent") then
             local eventName = formatEventName(shuffledItems[i])
-            LP.muscleEvent:FireServer(eventName, tool)
+            pcall(function() LP.muscleEvent:FireServer(eventName, tool) end)
         end
     end
 end
 
-local eatingRunning = false
-task.spawn(function()
-    while true do
-        if eatingRunning then
-            activateRandomItems(4)
-            task.wait(0.5)
-        else
-            task.wait(0.5)
-        end
-    end
-end)
-
-GiftTab:AddButton("Eat Everything", function()
-    eatingRunning = not eatingRunning
-    if eatingRunning then
-        activateRandomItems(4)
+GiftTab:CreateToggle({
+    Name = "Eat Everything",
+    Description = "Consume consumibles aleatorios automáticamente",
+    Default = false
+}, function(state)
+    getgenv().autoEatRunning = state
+    if state then
+        task.spawn(function()
+            while getgenv().autoEatRunning do
+                activateRandomItems(4)
+                task.wait(0.5)
+            end
+        end)
     end
 end)
 
