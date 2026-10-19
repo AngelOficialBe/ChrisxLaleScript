@@ -1321,6 +1321,7 @@ local BOSS_LOOP_DELAY = 0.08
 local lastBossPunch = 0
 local lastBossChestClaim = 0
 local lastBossTarget = nil
+local lastPositionedCharacter = nil
 
 local function getBossHealth(model)
     local statsFolder = model:FindFirstChild("stats")
@@ -1423,16 +1424,35 @@ local function equipBossPunch(character, humanoid)
     return tool
 end
 
-local function positionAboveBoss(hitbox)
+-- Posiciona una sola vez por boss/personaje. No fuerza el CFrame cada ciclo,
+-- porque eso puede competir con la física y hacer que la cámara/personaje tiemblen.
+local function positionAboveBossOnce(hitbox)
     local character, humanoid, rootPart = getBossCharacterParts()
-    if not character or not hitbox or not hitbox:IsDescendantOf(workspace) then
-        return
+    if not character or not humanoid or not rootPart then
+        return false
+    end
+    if not hitbox or not hitbox:IsA("BasePart") or not hitbox:IsDescendantOf(workspace) then
+        return false
     end
 
     local targetPosition = hitbox.Position + Vector3.new(0, BOSS_HEIGHT, 0)
-    pcall(function()
-        rootPart.CFrame = CFrame.lookAt(targetPosition, hitbox.Position)
+    local success, err = pcall(function()
+        -- Conserva la orientación actual para evitar que la cámara gire hacia el boss.
+        local rotationOnly = rootPart.CFrame - rootPart.Position
+        rootPart.AssemblyLinearVelocity = Vector3.zero
+        rootPart.AssemblyAngularVelocity = Vector3.zero
+        rootPart.CFrame = CFrame.new(targetPosition) * rotationOnly
+        rootPart.AssemblyLinearVelocity = Vector3.zero
+        rootPart.AssemblyAngularVelocity = Vector3.zero
     end)
+
+    if not success then
+        warn("[Auto Boss] No se pudo posicionar el personaje:", err)
+        return false
+    end
+
+    lastPositionedCharacter = character
+    return true
 end
 
 local function attackActiveBoss()
@@ -1491,6 +1511,7 @@ BossTab:CreateToggle({
 }, function(state)
     AutoBoss = state
     lastBossTarget = nil
+    lastPositionedCharacter = nil
 
     pcall(function()
         StarterGui:SetCore("SendNotification", {
@@ -1507,6 +1528,7 @@ task.spawn(function()
 
         if not AutoBoss then
             lastBossTarget = nil
+            lastPositionedCharacter = nil
             continue
         end
 
@@ -1524,13 +1546,18 @@ task.spawn(function()
         if boss and hitbox then
             if boss ~= lastBossTarget then
                 lastBossTarget = boss
+                lastPositionedCharacter = nil
                 print("[Auto Boss] Boss detectado:", boss.Name)
             end
 
-            positionAboveBoss(hitbox)
+            -- Solo recoloca al aparecer otro boss o si el jugador reaparece.
+            if character ~= lastPositionedCharacter then
+                positionAboveBossOnce(hitbox)
+            end
             attackActiveBoss()
         else
             lastBossTarget = nil
+            lastPositionedCharacter = nil
             tryClaimBossChest()
         end
     end
