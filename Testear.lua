@@ -713,7 +713,8 @@ function Library:CreateWindow(config)
         ["Principal"] = "🏠",
         ["Farming"] = "🏋️",
         ["Rebirth"] = "🌌",
-        ["Auto Rocks"] = "🪨",
+        ["Auto Rocks"] = "⛰️",
+		["Bosses"] = "👹",
         ["Stats"] = "📊",
         ["Gift"] = "🎁",
         ["Teleport"] = "🌀",
@@ -1000,7 +1001,8 @@ local Window = Library:CreateWindow({
 local PrincipalTab = Window:CreateTab("Principal", "🏠", "Bienvenido al script, " .. LP.Name)
 local FarmingTab = Window:CreateTab("Farming", "🏋️", "Automatización de recursos")
 local RebirthTab = Window:CreateTab("Rebirth", "🌌", "Sistema de reencarnaciones")
-local RocksTab = Window:CreateTab("Auto Rocks", "🪨", "Farming automático de rocas")
+local RocksTab = Window:CreateTab("Auto Rocks", "⛰️", "Farming automático de rocas")
+local BossTab = Window:CreateTab("Auto Boss", "👹", "Auto Bosses")
 local StatsTab = Window:CreateTab("Stats", "📊", "Calculadoras y monitoreo en tiempo real")
 local GiftTab = Window:CreateTab("Gift", "🎁", "Regalar consumibles a otros jugadores")
 local TeleportTab = Window:CreateTab("Teleport", "🌀", "Viaja por el mapa")
@@ -1124,7 +1126,7 @@ RebirthTab:AddSection("Fast Rebirth")
 
 RebirthTab:CreateToggle({
     Name = "Auto Rebirths combination",
-    Description = "Equipa mejores pets de repetición -> fuerza -> pets de rebirth -> renace",
+    Description = "Sirven Golems/Packs",
     Default = false
 }, function(state)
     RebirthsCombination = state
@@ -1142,7 +1144,7 @@ end)
 
 RebirthTab:CreateToggle({
     Name = "Rebirth chaos",
-    Description = "Equipa Swift Samurai para repeticiones y Tribal Overlord para renacer",
+    Description = "Renace Pack Chaos",
     Default = false
 }, function(state)
     RebirthChaos = state
@@ -1160,7 +1162,7 @@ end)
 
 RebirthTab:CreateToggle({
     Name = "Rebirths titans",
-    Description = "Equipa Omega Overlord para repeticiones y Titanium Hydra para renacer",
+    Description = "Renace Pack Titans",
     Default = false
 }, function(state)
     RebirthsTitans = state
@@ -1208,6 +1210,8 @@ local rockList = {
     { Name = "Farm Legend Gym Rock", MinDur = 1000000, DurVal = 1000000 },
     { Name = "Farm Muscle King Gym Rock", MinDur = 5000000, DurVal = 5000000 },
     { Name = "Farm Ancient Jungle Rock", MinDur = 10000000, DurVal = 10000000 },
+	{ Name = "Farm Industrial Gym Rock", MinDur = 25000000, DurVal = 25000000 },
+	{ Name = "Farm Halloween Gym Rock", MinDur = 0, DurVal = 0 },
 }
 
 for _, rockInfo in ipairs(rockList) do
@@ -1346,19 +1350,15 @@ end)
 GiftTab:AddSection("Monitoreo de Consumibles")
 
 local proteinEggBtn = GiftTab:AddButton("Protein Eggs: 0", function() end)
-local tropicalShakeBtn = GiftTab:AddButton("Tropical Shakes: 0", function() end)
 
 local function updateItemCounts()
     local proteinEggCount = 0
-    local tropicalShakeCount = 0
     
     local backpack = LP:FindFirstChild("Backpack")
     if backpack then
         for _, item in ipairs(backpack:GetChildren()) do
             if item.Name == "Protein Egg" then
                 proteinEggCount = proteinEggCount + 1
-            elseif item.Name == "Tropical Shake" or item.Name == "Piñas" then
-                tropicalShakeCount = tropicalShakeCount + 1
             end
         end
     end
@@ -1368,14 +1368,11 @@ local function updateItemCounts()
         for _, item in ipairs(consumablesFolder:GetChildren()) do
             if item.Name == "Protein Egg" then
                 proteinEggCount = proteinEggCount + 1
-            elseif item.Name == "Tropical Shake" then
-                tropicalShakeCount = tropicalShakeCount + 1
             end
         end
     end
 
     proteinEggBtn.Text = "Protein Eggs: " .. proteinEggCount
-    tropicalShakeBtn.Text = "Tropical Shakes: " .. tropicalShakeCount
 end
 
 task.spawn(function()
@@ -1455,66 +1452,6 @@ GiftTab:AddButton("Gift Protein Eggs", function()
         end
         updateItemCounts()
         StarterGui:SetCore("SendNotification", { Title = "Gift Finalizado", Text = "Se regalaron " .. countSent .. " Protein Eggs a " .. targetPlayer.DisplayName, Duration = 4 })
-    end)
-end)
-
-GiftTab:AddSection("Regalar Tropical Shakes")
-
-local targetShakePlayerName = ""
-local giftShakeAmount = 0
-
-GiftTab:AddTextBox("Nombre del jugador (Username)", function(text)
-    targetShakePlayerName = text
-end)
-
-GiftTab:AddTextBox("Cantidad de Shakes", function(text)
-    giftShakeAmount = tonumber(text) or 0
-end)
-
-GiftTab:AddButton("Gift Tropical Shakes", function()
-    if targetShakePlayerName == "" or giftShakeAmount <= 0 then
-        StarterGui:SetCore("SendNotification", { Title = "Gift Error", Text = "Escribe un jugador y cantidad válida.", Duration = 3 })
-        return
-    end
-
-    local targetPlayer = nil
-    for _, plr in ipairs(Players:GetPlayers()) do
-        if plr.Name:lower() == targetShakePlayerName:lower() or plr.DisplayName:lower() == targetShakePlayerName:lower() then
-            targetPlayer = plr
-            break
-        end
-    end
-
-    if not targetPlayer then
-        StarterGui:SetCore("SendNotification", { Title = "Gift Error", Text = "Jugador no encontrado.", Duration = 3 })
-        return
-    end
-
-    task.spawn(function()
-        local countSent = 0
-        local giftRemote = ReplicatedStorage:FindFirstChild("rEvents") and ReplicatedStorage.rEvents:FindFirstChild("giftRemote")
-        local consumablesFolder = LP:FindFirstChild("consumablesFolder")
-        
-        if giftRemote and consumablesFolder then
-            for i = 1, giftShakeAmount do
-                local shake = consumablesFolder:FindFirstChild("Tropical Shake")
-                if shake then
-                    pcall(function()
-                        if giftRemote:IsA("RemoteFunction") then
-                            giftRemote:InvokeServer("giftRequest", targetPlayer, shake)
-                        else
-                            giftRemote:FireServer("giftRequest", targetPlayer, shake)
-                        end
-                    end)
-                    countSent = countSent + 1
-                    task.wait(0.15)
-                else
-                    break
-                end
-            end
-        end
-        updateItemCounts()
-        StarterGui:SetCore("SendNotification", { Title = "Gift Finalizado", Text = "Se regalaron " .. countSent .. " Tropical Shakes a " .. targetPlayer.DisplayName, Duration = 4 })
     end)
 end)
 
@@ -1601,7 +1538,7 @@ TeleportTab:AddButton("Mythical Island", function()
     tpTo(CFrame.new(2255, 7, 1071), "Mythical Island")
 end)
 
-TeleportTab:AddButton("***** Island", function()
+TeleportTab:AddButton("Eternal Island", function()
     tpTo(CFrame.new(-6768, 7, -1287), "***** Island")
 end)
 
@@ -1617,16 +1554,12 @@ TeleportTab:AddButton("Jungle Island", function()
     tpTo(CFrame.new(-8659, 6, 2384), "Jungle Island")
 end)
 
-TeleportTab:AddButton("Brawl Lava", function()
-    tpTo(CFrame.new(4471, 119, -8836), "Brawl Lava")
+TeleportTab:AddButton("Industrial Gym", function()
+    tpTo(CFrame.new(-5563.23388671875, 60.47392654418945, 4942.44482421875), "Industrial Gym")
 end)
 
-TeleportTab:AddButton("Brawl Desert", function()
-    tpTo(CFrame.new(960, 17, -7398), "Brawl Desert")
-end)
-
-TeleportTab:AddButton("Brawl Regular", function()
-    tpTo(CFrame.new(-1849, 20, -6335), "Brawl Regular")
+TeleportTab:AddButton("Halloween Gym", function()
+    tpTo(CFrame.new(5558, 86, 5838), "Halloween Gym")
 end)
 
 -- ==================== PESTAÑA SETTINGS / CONFIG ====================
