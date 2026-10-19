@@ -1217,14 +1217,14 @@ local Window = Library:CreateWindow({
     Icon = "rbxassetid://6031097225"
 })
 
--- Crear Pestañas
+-- Crear Pestañas (Aquí estaba faltando crear el objeto GiftTab)
 local PrincipalTab = Window:CreateTab("Principal", "🏠", "Bienvenido al script, " .. LP.Name)
 local FarmingTab = Window:CreateTab("Farming", "🏋️", "Automatización de recursos")
 local RebirthTab = Window:CreateTab("Rebirth", "🌌", "Sistema de reencarnaciones")
 local RocksTab = Window:CreateTab("Auto Rocks", "⛰️", "Farming automático de rocas")
 local AutoBossTab = Window:CreateTab("Auto Boss", "👹", "Combate automático")
 local StatsTab = Window:CreateTab("Stats", "📊", "Calculadoras y monitoreo en tiempo real")
-local GiftTab = Window:CreateTab("Gift", "🎁", "Regalar consumibles a otros jugadores")
+local GiftTab = Window:CreateTab("Gift", "🎁", "Regalar consumibles a otros jugadores") -- <--- ¡Esta línea faltaba!
 local TeleportTab = Window:CreateTab("Teleport", "🌀", "Viaja por el mapa")
 local SettingsTab = Window:CreateTab("Settings", "⚙️", "Configuración y automatización")
 
@@ -1435,7 +1435,7 @@ local rockList = {
 for _, rockInfo in ipairs(rockList) do
     RocksTab:CreateToggle({
         Name = rockInfo.Name,
-        Description = "Requiere " .. rockInfo.MinDur + 0 .. " de Durabilidad",
+        Description = "Requiere " .. rockInfo.MinDur .. " de Durabilidad",
         Default = false
     }, function(bool)
         if bool then
