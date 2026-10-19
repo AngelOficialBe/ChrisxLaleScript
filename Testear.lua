@@ -10,6 +10,7 @@ local Lighting = game:GetService("Lighting")
 local StarterGui = game:GetService("StarterGui")
 local TeleportService = game:GetService("TeleportService")
 local HttpService = game:GetService("HttpService")
+local Stats = game:GetService("Stats")
 
 local LP = Players.LocalPlayer
 
@@ -37,6 +38,56 @@ local FastFarm500 = false
 local FastFarm2k = false
 local FastFarm10k = false
 local FastFarm20k = false
+
+-- ==================== PING PROTECTION ====================
+local PingProtection = true
+local PING_PAUSE = 15000
+local PING_RESUME = 350
+local PING_CHECK = 0.5
+local pingPaused = false
+local farm500BeforePing, farm2kBeforePing, farm10kBeforePing, farm20kBeforePing = false, false, false, false
+
+local function getPing()
+    local success, ping = pcall(function()
+        local network = Stats:FindFirstChild("Network")
+        local serverStats = network and network:FindFirstChild("ServerStatsItem")
+        local dataPing = serverStats and serverStats:FindFirstChild("Data Ping")
+        if dataPing then
+            return tonumber(string.match(dataPing:GetValueString(), "%d+"))
+        end
+        return nil
+    end)
+    return success and ping or nil
+end
+
+task.spawn(function()
+    while true do
+        task.wait(PING_CHECK)
+        if PingProtection then
+            local ping = getPing()
+            if ping then
+                if not pingPaused and ping >= PING_PAUSE then
+                    pingPaused = true
+                    farm500BeforePing = FastFarm500
+                    farm2kBeforePing = FastFarm2k
+                    farm10kBeforePing = FastFarm10k
+                    farm20kBeforePing = FastFarm20k
+                    FastFarm500 = false
+                    FastFarm2k = false
+                    FastFarm10k = false
+                    FastFarm20k = false
+                elseif pingPaused and ping <= PING_RESUME then
+                    pingPaused = false
+                    if farm500BeforePing then FastFarm500 = true end
+                    if farm2kBeforePing then FastFarm2k = true end
+                    if farm10kBeforePing then FastFarm10k = true end
+                    if farm20kBeforePing then FastFarm20k = true end
+                    farm500BeforePing, farm2kBeforePing, farm10kBeforePing, farm20kBeforePing = false, false, false, false
+                end
+            end
+        end
+    end
+end)
 
 -- Variables de Estado de Rebirth
 local AutoRebirth = false
@@ -677,7 +728,6 @@ function Library:CreateWindow(config)
         Size = UDim2.new(1, -24, 0, 1)
     }, Sidebar)
 
-    -- ==================== CORRECCIÓN: SCROLLINGFRAME PARA EL MENÚ LATERAL ====================
     local NavContainer = Create("ScrollingFrame", {
         Name = "NavContainer",
         Size = UDim2.new(1, -6, 1, -64),
@@ -714,7 +764,6 @@ function Library:CreateWindow(config)
         ["Farming"] = "🏋️",
         ["Rebirth"] = "🌌",
         ["Auto Rocks"] = "⛰️",
-		["Bosses"] = "👹",
         ["Stats"] = "📊",
         ["Gift"] = "🎁",
         ["Teleport"] = "🌀",
@@ -1002,7 +1051,7 @@ local PrincipalTab = Window:CreateTab("Principal", "🏠", "Bienvenido al script
 local FarmingTab = Window:CreateTab("Farming", "🏋️", "Automatización de recursos")
 local RebirthTab = Window:CreateTab("Rebirth", "🌌", "Sistema de reencarnaciones")
 local RocksTab = Window:CreateTab("Auto Rocks", "⛰️", "Farming automático de rocas")
-local BossTab = Window:CreateTab("Auto Boss", "👹", "Auto Bosses")
+local BossTab = Window:CreateTab("Auto Boss", "👹", "Combate automático")
 local StatsTab = Window:CreateTab("Stats", "📊", "Calculadoras y monitoreo en tiempo real")
 local GiftTab = Window:CreateTab("Gift", "🎁", "Regalar consumibles a otros jugadores")
 local TeleportTab = Window:CreateTab("Teleport", "🌀", "Viaja por el mapa")
@@ -1210,8 +1259,8 @@ local rockList = {
     { Name = "Farm Legend Gym Rock", MinDur = 1000000, DurVal = 1000000 },
     { Name = "Farm Muscle King Gym Rock", MinDur = 5000000, DurVal = 5000000 },
     { Name = "Farm Ancient Jungle Rock", MinDur = 10000000, DurVal = 10000000 },
-	{ Name = "Farm Industrial Gym Rock", MinDur = 25000000, DurVal = 25000000 },
-	{ Name = "Farm Halloween Gym Rock", MinDur = 0, DurVal = 0 },
+	{ Name = "Farm Industrial Jungle Rock", MinDur = 25000000, DurVal = 25000000 },
+	{ Name = "Farm Hallowed Rock", MinDur = 0, DurVal = 0 },
 }
 
 for _, rockInfo in ipairs(rockList) do
@@ -1259,6 +1308,26 @@ for _, rockInfo in ipairs(rockList) do
         end
     end)
 end
+
+-- ==================== PESTAÑA AUTO BOSS ====================
+BossTab:AddSection("Auto Boss Farm")
+
+BossTab:CreateToggle({
+    Name = "Auto Boss Farm",
+    Description = "Se posiciona a altura 70 + ataque ultra rápido + reclama el cofre automáticamente",
+    Default = false
+}, function(state)
+    AutoBoss = state
+    if state then
+        pcall(function()
+            StarterGui:SetCore("SendNotification", {
+                Title = "SLK Paid Hub",
+                Text = "Auto Boss Farm Activado 👹",
+                Duration = 3
+            })
+        end)
+    end
+end)
 
 -- ==================== PESTAÑA STATS & CALCULATOR ====================
 StatsTab:AddSection("Monitoreo en Tiempo Real")
