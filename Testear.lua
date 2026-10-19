@@ -4,7 +4,6 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local VirtualUser = game:GetService("VirtualUser")
 local TweenService = game:GetService("TweenService")
 local RunService = game:GetService("RunService")
-local CoreGui = game:GetService("CoreGui")
 local UserInputService = game:GetService("UserInputService")
 local Lighting = game:GetService("Lighting")
 local StarterGui = game:GetService("StarterGui")
@@ -85,20 +84,23 @@ end
 
 LoadConfig()
 
--- Lógica de Auto Rejoin
-CoreGui.RobloxPromptGui.promptOverlay.ChildAdded:Connect(function(child)
-    if AutoRejoinActive and (child.Name == "ErrorPrompt" or child:FindFirstChild("ErrorTitle")) then
-        pcall(function()
-            StarterGui:SetCore("SendNotification", {
-                Title = "SLK Paid Hub",
-                Text = "Reconectando al servidor... 🔄",
-                Duration = 5
-            })
-        end)
-        task.wait(1)
-        TeleportService:Teleport(game.PlaceId, LP)
-    end
-end)
+-- Lógica de Auto Rejoin (Usando PlayerGui para evitar bloqueos en Delta)
+local promptOverlay = LP:WaitForChild("PlayerGui"):FindFirstChild("RobloxPromptGui")
+if promptOverlay and promptOverlay:FindFirstChild("promptOverlay") then
+    promptOverlay.promptOverlay.ChildAdded:Connect(function(child)
+        if AutoRejoinActive and (child.Name == "ErrorPrompt" or child:FindFirstChild("ErrorTitle")) then
+            pcall(function()
+                StarterGui:SetCore("SendNotification", {
+                    Title = "SLK Paid Hub",
+                    Text = "Reconectando al servidor... 🔄",
+                    Duration = 5
+                })
+            end)
+            task.wait(1)
+            TeleportService:Teleport(game.PlaceId, LP)
+        end
+    end)
+end
 
 -- ==================== DICCIONARIO Y SISTEMA DE MASCOTAS ====================
 local PETS = {
@@ -558,7 +560,7 @@ RunService.Heartbeat:Connect(function()
     if not Character or not Character.Parent then return end
     local HumanoidRootPart = Character:FindFirstChild("HumanoidRootPart")
     local Humanoid = Character:FindFirstChildOfClass("Humanoid")
-    if not HumanoidRootPart or not Humanoid or Humanoid.Health <= 0 then return end
+    if not HumanoidRootPart || not Humanoid || Humanoid.Health <= 0 then return end
     
     local boss, hitbox = getBoss()
     if boss and hitbox then
@@ -590,7 +592,7 @@ RunService.Heartbeat:Connect(function()
     end
 end)
 
--- ==================== LIBRERÍA DE INTERFAZ GRÁFICA ====================
+-- ==================== LIBRERÍA DE INTERFAZ GRÁFICA (ADAPTADA PARA DELTA) ====================
 local Library = {}
 
 local function Create(className, properties, parent)
@@ -630,7 +632,8 @@ function Library:CreateWindow(config)
     local WindowObj = {}
     local windowTitle = config.Title or "👑 ChrisxLale Script"
     
-    local parentUI = (gethui and gethui()) or CoreGui or LP:WaitForChild("PlayerGui")
+    -- FORZADO A PLAYERGUI PARA QUE DELTA LO MUESTRE SIN PROBLEMAS
+    local parentUI = LP:WaitForChild("PlayerGui")
     if parentUI:FindFirstChild("ChrisxLale_AestheticUI") then
         parentUI.ChrisxLale_AestheticUI:Destroy()
     end
@@ -638,7 +641,8 @@ function Library:CreateWindow(config)
     local ScreenGui = Create("ScreenGui", {
         Name = "ChrisxLale_AestheticUI",
         ZIndexBehavior = Enum.ZIndexBehavior.Sibling,
-        IgnoreGuiInset = true
+        IgnoreGuiInset = true,
+        ResetOnSpawn = false
     }, parentUI)
 
     local MainFrame = Create("Frame", {
@@ -1217,14 +1221,14 @@ local Window = Library:CreateWindow({
     Icon = "rbxassetid://6031097225"
 })
 
--- Crear Pestañas (Aquí estaba faltando crear el objeto GiftTab)
+-- Crear Pestañas
 local PrincipalTab = Window:CreateTab("Principal", "🏠", "Bienvenido al script, " .. LP.Name)
 local FarmingTab = Window:CreateTab("Farming", "🏋️", "Automatización de recursos")
 local RebirthTab = Window:CreateTab("Rebirth", "🌌", "Sistema de reencarnaciones")
 local RocksTab = Window:CreateTab("Auto Rocks", "⛰️", "Farming automático de rocas")
 local AutoBossTab = Window:CreateTab("Auto Boss", "👹", "Combate automático")
 local StatsTab = Window:CreateTab("Stats", "📊", "Calculadoras y monitoreo en tiempo real")
-local GiftTab = Window:CreateTab("Gift", "🎁", "Regalar consumibles a otros jugadores") -- <--- ¡Esta línea faltaba!
+local GiftTab = Window:CreateTab("Gift", "🎁", "Regalar consumibles a otros jugadores")
 local TeleportTab = Window:CreateTab("Teleport", "🌀", "Viaja por el mapa")
 local SettingsTab = Window:CreateTab("Settings", "⚙️", "Configuración y automatización")
 
